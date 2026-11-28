@@ -1,0 +1,42 @@
+{
+ "v": 1,
+ "n": 12,
+ "C": 512,
+ "vrstvy": [
+  "hladka",
+  "omitka",
+  "malba",
+  "olej",
+  "parkety",
+  "teraco",
+  "metlach",
+  "kamen",
+  "drevo",
+  "lak",
+  "kov",
+  "sklo"
+ ],
+ "perioda": [
+  2.0,
+  1.6,
+  2.0,
+  1.6,
+  1.1879,
+  1.0,
+  0.6,
+  1.0,
+  1.0,
+  0.6,
+  0.8,
+  1.2
+ ],
+ "prumer": {
+  "parkety": "0xaf7f52",
+  "teraco": "0xaca598",
+  "metlach": "0x9c553f",
+  "kamen": "0xaaa292",
+  "drevo": "0x764c2e"
+ },
+ "jpg": "interier.jpg",
+ "ktx2": "interier.ktx2"
+}

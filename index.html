@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0e">
+<title>Stín nad Starým Městem – ukázka</title>
+<link rel="icon" href="data:,">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#cbd7e2;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#fff;touch-action:none;user-select:none;-webkit-user-select:none}
+#app canvas{display:block;width:100vw;height:100vh;touch-action:none}
+#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#1b1f24;font-size:16px;z-index:50}
+.pan{background:rgba(20,24,30,.62);border-radius:12px;padding:8px 10px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#hud{position:fixed;inset:0;pointer-events:none}
+#tl{position:absolute;left:calc(10px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));width:190px;font-size:12px}
+#tl .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+#sus{height:8px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden;margin-bottom:7px}
+#susbar{height:100%;width:0;background:#e0b04a;transition:width .1s}
+#susbar.mid{background:#f08a24}#susbar.hi{background:#e5392e}
+#cont.ok{color:#9be2a4}#cont.bad{color:#ffb4a8}
+#oko{display:flex;align-items:center;gap:7px;font-weight:600;transition:opacity .3s}#oko svg{flex:none}#oko .ok1{fill:none;stroke-width:1.6}#oko .ok3{fill:#14181e}
+#oko.o0{color:#9be2a4}#oko.o0 .ok1{stroke:#9be2a4}#oko.o0 .ok2{fill:none}#oko.o0 .ok3{fill:none}
+#oko.o1{color:#f2c14e}#oko.o1 .ok1{stroke:#f2c14e}#oko.o1 .ok2{fill:#f2c14e}
+#oko.o1 .ok2{fill:none;stroke:#f2c14e;stroke-width:1.2}
+#oko.o2{color:#ff9f5a}#oko.o2 .ok1{stroke:#ff9f5a}#oko.o2 .ok2{fill:#ff9f5a}
+#oko.o3{color:#ff6b6b}#oko.o3 .ok1{stroke:#ff6b6b}#oko.o3 .ok2{fill:#ff6b6b}
+#kry{display:none;flex:none;width:15px;height:15px;border-radius:50%;margin-left:2px;background:conic-gradient(#9be2a4 calc(var(--p,100)*1%),rgba(255,255,255,.18) 0)}#kry.on{display:inline-block}#kry.zle{background:#ff6b6b}
+#oko.ted svg{animation:okoT 1s ease-in-out infinite}@keyframes okoT{50%{transform:scale(1.15)}}#oko.mimo{opacity:.55}
+#duv{min-height:0;font-size:11px;color:#ffcf99;margin:-2px 0 5px;line-height:1.25}#duv:empty{display:none}
+#tl .lad{display:none}#tl.lad .lad{display:flex}#tl.lad #sus.lad{display:block}
+#dist,#time{color:#d8dde3}
+#hud.free #tl{display:none}
+#hlas{position:absolute;right:calc(10px + env(safe-area-inset-right));top:calc(188px + env(safe-area-inset-top));width:136px;box-sizing:border-box;padding:4px 6px;font:inherit;font-size:11px;color:#fff;border:1px solid rgba(255,255,255,.35);pointer-events:auto;cursor:pointer}
+.hlr select,.hlr input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:7px 8px;border-radius:10px;border:1px solid #556;background:#1c2128;color:#fff;margin-bottom:8px}
+.card .hl2{margin-top:8px}.card .hb1{margin-top:12px;text-align:left}#hl .card{max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}/* linka H: zapisovac hrbolu */#hbZ{display:none;position:absolute;left:50%;transform:translateX(-50%);top:calc(2px + env(safe-area-inset-top));padding:1px 7px;border-radius:8px;font-size:10px;line-height:15px;color:#fff;background:rgba(150,24,24,.72);pointer-events:none;z-index:5}#hbZ.on{display:block}#hlTxt{display:none;width:100%;box-sizing:border-box;height:64px;margin-top:8px;font-size:11px;background:#111;color:#ddd;border-radius:8px;border:1px solid #444}#hlTxt.on{display:block}
+#hod{position:absolute;right:calc(10px + env(safe-area-inset-right));top:calc(150px + env(safe-area-inset-top));width:136px;box-sizing:border-box;padding:3px 6px;font-size:11px;text-align:center;white-space:pre;pointer-events:auto;cursor:pointer}
+#mini{position:absolute;right:calc(10px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));width:132px;height:132px;border-radius:50%;border:2px solid rgba(255,255,255,.85);box-shadow:0 2px 10px rgba(0,0,0,.3)}
+#msg{position:absolute;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translate(-50%,-8px);max-width:min(70vw,420px);text-align:center;font-size:14px;opacity:0;transition:opacity .25s,transform .25s;padding:8px 14px;border-radius:10px;background:rgba(20,24,30,.72)}
+#msg.on{opacity:1;transform:translate(-50%,0)}
+#joy{position:absolute;left:calc(22px + env(safe-area-inset-left));bottom:calc(22px + env(safe-area-inset-bottom));width:124px;height:124px;border-radius:50%;background:rgba(20,24,30,.28);border:2px solid rgba(255,255,255,.5);pointer-events:auto;touch-action:none}
+#knob{position:absolute;left:37px;top:37px;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+#btns{position:absolute;right:calc(18px + env(safe-area-inset-right));bottom:calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:auto}
+#btns button{font:inherit;color:#fff;border:1.5px solid rgba(255,255,255,.6);background:rgba(20,24,30,.55);border-radius:22px;padding:8px 14px;font-size:13px}
+#btns .r2{display:flex;gap:8px}
+#run{width:74px;height:74px;border-radius:50%!important;font-size:15px!important;padding:0!important}
+#run.on,#tel.on,#fotB.on{background:#e0b04a!important;color:#1b1f24!important;border-color:#fff!important}
+#btns .r2.rb{align-items:center}#hud.drive #tel{display:none}
+#car{display:none;max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#hud.free #car.on,#hud.mise #car.on{display:block}
+#dum{display:none;max-width:46vw;white-space:nowrap}#dum.on{display:block}#obchod{display:none;max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#obchod.on{display:block}
+#mhd{display:none;max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#mhd.on{display:block}#sed{display:none}#sed.on{display:block}#zast{display:none;max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#zast.on{display:block}#odj .card{max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto}#odj .r{display:flex;align-items:center;gap:8px;font-size:14px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.08)}#odj .r i{margin-left:auto;color:#aab3bd;font-style:normal;white-space:nowrap}#odj .ln{display:inline-block;min-width:34px;text-align:center;font-weight:700;color:#fff;border-radius:6px;padding:2px 5px}#odjL{margin-bottom:10px}#odjP{display:flex;flex-wrap:wrap;gap:5px;margin:-4px 0 12px}#odjD b{min-width:42px}#nova{display:none;position:absolute;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translateX(-50%);z-index:30;font:inherit;font-size:14px;font-weight:600;padding:9px 16px;border:0;border-radius:12px;background:#e0b04a;color:#1b1f24;box-shadow:0 2px 8px rgba(0,0,0,.4)}#nova.on{display:block}
+#pedals{display:none;gap:12px}#hud.drive #pedals{display:flex}#hud.drive #run{display:none}
+#pedals button{width:78px;height:78px;border-radius:50%!important;padding:0!important;font-size:14px!important;touch-action:none}
+#gas{background:rgba(38,118,62,.62)!important}#brk{background:rgba(150,42,36,.62)!important}
+#pedals button.on{border-color:#fff!important;filter:brightness(1.6)}
+#spd{display:none;position:absolute;left:calc(10px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));font-size:19px;font-weight:650;min-width:92px;text-align:center}
+#hud.drive #spd{display:block}
+#spd.bad{color:#ffb4a8}
+#mark{position:absolute;left:0;top:0;display:none;pointer-events:none}
+#mark div{transform:translate(-50%,-100%);width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 0 0 1.5px rgba(20,24,30,.55)}
+#mark.warn div{background:#ffb15c;animation:bl .5s infinite alternate}
+@keyframes bl{to{opacity:.55}}
+#attr{position:absolute;left:50%;bottom:calc(4px + env(safe-area-inset-bottom));transform:translateX(-50%);font-size:10px;color:rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.6);white-space:nowrap}
+#fps{position:absolute;left:50%;top:60px;transform:translateX(-50%);font-size:11px}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,18,22,.55);z-index:20;padding:16px}
+.ov.on{display:flex}
+.card{max-width:440px;width:100%;background:rgba(24,28,34,.94);border-radius:16px;padding:18px 18px 16px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+.card h1{font-size:20px;margin:0 0 4px;font-weight:650}
+.card .sub{font-size:12px;color:#aab3bd;margin-bottom:12px}
+.card p{font-size:14px;line-height:1.5;margin:0 0 10px;color:#e3e7eb}
+.card ul{margin:0 0 14px;padding-left:18px;font-size:13px;line-height:1.55;color:#cfd5db}
+.card .b{display:flex;gap:10px;flex-wrap:wrap}
+.card button{flex:1;min-width:140px;font:inherit;font-size:15px;padding:11px 12px;border-radius:12px;border:0;background:#e0b04a;color:#1b1f24;font-weight:600}
+.card button.s{background:rgba(255,255,255,.12);color:#fff}
+#end.ok h1{color:#9be2a4}#end h1{color:#ffb4a8}
+#zad h1{color:#ffb4a8}#zad .card ul{display:block;margin-bottom:10px}#zad li.vyp{list-style:none;margin-left:-4px;font-style:italic;color:#aab3bd}#zad b{color:#ffd08a} /* NV2: zadrzen */
+#zad p.konec{color:#ffb4a8;font-weight:600}#zad p.sub{font-size:.85em;color:#aab3bd}#zad #zadPl .b{margin:6px 0 8px}#zad button:disabled{opacity:.45} /* patch167: rozsudek, placeni, konec kariery */
+/* HR0: mise (nabidka, brifink, vysledek, profil, tlacitka v misi) */
+#mise{position:absolute;left:calc(10px + env(safe-area-inset-left));top:calc(104px + env(safe-area-inset-top));display:none;gap:6px;pointer-events:auto}#hud.mise #mise{display:flex}
+#mise button{font:inherit;color:#fff;border:1.5px solid rgba(255,255,255,.6);background:rgba(20,24,30,.55);border-radius:18px;padding:6px 11px;font-size:12px}
+#mzde{display:none}#mzde.on{display:block;background:rgba(160,110,20,.7)!important}
+/* Pavel 22. 11.: pripad z prochazky kdykoli a kdekoli */
+#mpr{position:absolute;left:calc(10px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));display:none;pointer-events:auto;font:inherit;color:#fff;border:1.5px solid rgba(255,255,255,.6);background:rgba(160,110,20,.7);border-radius:18px;padding:7px 13px;font-size:13px}
+#hud.free #mpr{display:block}
+/* HR2: Jsem na miste, fotak, album */
+#mmisto{display:none}#mmisto.on{display:block;background:rgba(160,110,20,.7)!important}
+#foto{position:absolute;inset:0;display:none;pointer-events:none}#foto.on{display:block}
+#foto .ram{position:absolute;left:12%;right:12%;top:10%;bottom:10%;border:1.5px solid rgba(255,255,255,.5);border-radius:6px;box-shadow:0 0 0 2000px rgba(0,0,0,.18)}
+#foto .ram i{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border:1.5px solid rgba(255,255,255,.7);border-radius:50%}
+#foto.blesk .ram{background:rgba(255,255,255,.55)}
+.karV{display:block;background:rgba(224,176,74,.12);border:1px solid rgba(224,176,74,.4);border-radius:10px;padding:9px 11px;margin:0 0 10px;text-align:left}.karV>*{display:block}.karV b{font-size:14px}.karV .kc{font-size:15px;font-weight:700;color:var(--ok)}.karV .kc.m{color:#ffb4a8}.karV span{font-size:12.5px;margin-top:3px}.karV i{font-size:12px;opacity:.85;margin-top:5px} /* Ž2 */
+#foto.ap .ram{left:7%;right:7%;top:6%;bottom:6%;border-radius:2px;box-shadow:0 0 0 2000px rgba(0,0,0,.38)}#foto.ap .ram i{border-radius:0;width:26px;height:16px;margin:-8px 0 0 -13px} /* patch116: hledacek fotoaparatu */
+#fotoB{position:absolute;right:calc(14px + env(safe-area-inset-right));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:auto}
+#fotoB button{font:inherit;color:#fff;border:1.5px solid rgba(255,255,255,.6);background:rgba(20,24,30,.55);border-radius:18px;padding:7px 12px;font-size:12px}
+#fotoB #fSnap{width:64px;height:64px;border-radius:50%;padding:0;background:rgba(224,176,74,.85);color:#1b1f24;font-weight:700;font-size:11px}
+#hud.foto #btns>:not(.rb),#hud.foto #tel,#hud.foto #run,#hud.foto #pedals,#hud.foto #mini,#hud.foto #hod,#hud.foto #hlas{display:none}
+#hud.foto #fotoB{top:auto;bottom:calc(92px + env(safe-area-inset-bottom));transform:none} /* Ž2b: nad tlacitkem fotoaparatu */
+.alb{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 10px}
+.alb figure{margin:0;background:rgba(255,255,255,.06);border-radius:8px;overflow:hidden}.alb img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#222}
+.alb figcaption{font-size:11px;line-height:1.35;color:#cfd5db;padding:4px 6px}
+.ov .card.dlouha{max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+button.pr{display:block;width:100%;text-align:left;font:inherit;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:8px 11px;margin:0 0 7px}
+/* HR5a: spis (brifink), zakazky, razitko */
+.card.spis{background:#e8e0cc;color:#2b2620;position:relative}.card.spis h1{color:#2b2620}.card.spis .sub{color:#5f5646}
+.card.spis .pole{color:#2b2620}.ov .card.dlouha.spis .b{background:#e8e0cc}.card.spis .pole i{color:#7a6f5c}.card.spis button.s{background:rgba(0,0,0,.12);color:#2b2620}
+.raz{position:absolute;right:14px;top:10px;transform:rotate(-8deg);border:2.5px solid #b3261e;color:#b3261e;font-weight:800;letter-spacing:.12em;padding:2px 9px;border-radius:5px;font-size:15px;opacity:.85}
+.spisO{padding-right:96px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a6f5c;margin:0 0 2px}
+.spisH{display:flex;gap:10px;align-items:flex-start}.spisH>div:first-child{flex:0 0 auto;background:rgba(0,0,0,.06);border-radius:6px;padding:3px}
+.card .pole.varov{color:#b3261e!important;font-weight:700}.card .pole.varov:empty{display:none}
+.odzL{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin:0 0 8px}.odz{border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:6px 9px;opacity:.55;font-size:12px;margin:0 0 6px}.odzL .odz{margin:0}.odz.ma{opacity:1;border-color:#e0b04a}.odz b{display:block;font-size:13px;color:#e0b04a}.odz span{display:block;color:#c3cad1}
+ul.vy.stup li.akt{color:#e0b04a;font-weight:700}ul.vy.stup li.ok{color:#9be2a4}button.pr.vyb.ma{border-color:#9be2a4}.spisZ .raz.pov{border-color:#e0b04a;color:#e0b04a}
+.nova{font-size:12px;color:#e0b04a;margin:-2px 0 6px}.nova:empty{display:none}
+button.pr .st{color:#e7dccb}button.pr span.new{display:inline;color:#9be2a4}
+.spisZ{display:flex;align-items:center;gap:10px;margin:0 0 6px}.spisZ .raz{position:static;display:inline-block}.spisZ .raz.zav{border-color:#9be2a4;color:#9be2a4}.spisZ .op{font-size:11px;color:#c3cad1;letter-spacing:.04em}
+button.pr b{display:block;font-size:14px;margin-bottom:2px}button.pr span{display:block;font-size:12px;color:#c3cad1}button.pr.off{opacity:.45}button.pr .kdy{color:#e0b04a}
+.card .pole{font-size:13px;line-height:1.45;color:#e3e7eb;margin:0 0 7px}.card .pole i{display:block;font-style:normal;font-size:11px;color:#aab3bd;text-transform:uppercase;letter-spacing:.04em}
+.card .hv{font-size:24px;color:#e0b04a;letter-spacing:2px;margin:-4px 0 2px}#vyhC h1.ok{color:#9be2a4}#vyhC h1.bad{color:#ffb4a8}
+.card ul.vy{display:block!important;padding-left:2px;list-style:none;margin:4px 0 6px}
+.card .vyN{font-size:13px;font-weight:700;margin:8px 0 0;color:#e7dccb}.card ul.vy li.ok{color:#9be2a4}.card ul.vy li.ch{color:#ffb4a8}.card ul.vy li.inf{color:#c9c1b4}
+.card textarea,.card input{width:100%;font:inherit;font-size:12px;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:6px 8px;margin:0 0 8px;user-select:text;-webkit-user-select:text;touch-action:auto}
+.card textarea{height:54px;resize:none;word-break:break-all}
+.ov .card.dlouha .b{position:sticky;bottom:-16px;background:rgba(24,28,34,.97);padding:10px 0 4px;margin-top:4px}
+@media (max-height:430px){.card .pole{font-size:12.5px;margin-bottom:5px}.card h1{font-size:18px}.card .sub{margin-bottom:8px}}
+@media (max-height:430px){.card{padding:12px 14px}.card ul{display:none}.card p{font-size:13px}}
+@media (max-height:380px) and (orientation:landscape){#mini{width:112px;height:112px}#hod{top:calc(130px + env(safe-area-inset-top));width:126px;font-size:10px;padding:2px 5px}#hlas{top:calc(164px + env(safe-area-inset-top));width:126px;font-size:10px;padding:3px 5px}} /* Z2: hodiny se dvema radky nad tlacitky */
+@media (max-width:600px) and (orientation:portrait){#tl{width:160px}#mini{width:104px;height:104px}#hod{top:calc(122px + env(safe-area-inset-top));width:108px;font-size:10px;padding:3px 4px}#hlas{top:calc(158px + env(safe-area-inset-top));width:108px;font-size:10px;padding:3px 4px}#msg{top:calc(164px + env(safe-area-inset-top));max-width:86vw}}
+
+/* Z1 + UI (Pavel 25. 11.: celkove UI pripravene a prehledne): jednotny vzhled HUD, telefon (src/telefon.js), uvod s rezimy */
+:root{--pan:rgba(16,20,26,.66);--pan2:rgba(16,20,26,.92);--hr:rgba(255,255,255,.16);--acc:#e0b04a;--ok:#9be2a4;--bad:#ff8a7a}
+.pan{background:var(--pan);border:1px solid var(--hr);box-shadow:0 2px 10px rgba(0,0,0,.18)}
+#btns button,#mise button,#fotoB button,#mpr,#kcB,#pov{font:inherit;font-size:13px;font-weight:600;color:#fff;background:var(--pan);border:1px solid rgba(255,255,255,.32);border-radius:999px;padding:10px 15px;line-height:18px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+#car::before,#mhd::before,#sed::before,#zast::before,#obchod::before,#mmisto::before,#mzde::before,#mkon::before,#mpr::before,#kcB::before,#pov::before{content:'';display:inline-block;width:16px;height:16px;margin:0 7px 0 -2px;vertical-align:-3px;background:currentColor;-webkit-mask:center/contain no-repeat;mask:center/contain no-repeat}
+#car::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 16l1.8-5h12.4L20 16v3H4z'/%3E%3Cpath d='M7 19v1.5M17 19v1.5'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 16l1.8-5h12.4L20 16v3H4z'/%3E%3Cpath d='M7 19v1.5M17 19v1.5'/%3E%3C/svg%3E")}#mhd::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='6' y='3' width='12' height='13' rx='1.5'/%3E%3Cpath d='M6 10h12M9 20l1.5-4M15 20l-1.5-4'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='6' y='3' width='12' height='13' rx='1.5'/%3E%3Cpath d='M6 10h12M9 20l1.5-4M15 20l-1.5-4'/%3E%3C/svg%3E")}#sed::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 4v9h9M8 13l-1 7M17 13v7M8 9h7'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 4v9h9M8 13l-1 7M17 13v7M8 9h7'/%3E%3C/svg%3E")}#zast::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 8v4l3 2'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 8v4l3 2'/%3E%3C/svg%3E")}#obchod::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h12v18H6z'/%3E%3Cpath d='M14 12h.01'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h12v18H6z'/%3E%3Cpath d='M14 12h.01'/%3E%3C/svg%3E")}#mmisto::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6-6-6-11a6 6 0 0 1 12 0c0 5-6 11-6 11z'/%3E%3Ccircle cx='12' cy='10' r='2'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6-6-6-11a6 6 0 0 1 12 0c0 5-6 11-6 11z'/%3E%3Ccircle cx='12' cy='10' r='2'/%3E%3C/svg%3E")}#mzde::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 21V4'/%3E%3Cpath d='M5 4h12l-2.5 4L17 12H5'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 21V4'/%3E%3Cpath d='M5 4h12l-2.5 4L17 12H5'/%3E%3C/svg%3E")}#mkon::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 7l10 10M17 7L7 17'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 7l10 10M17 7L7 17'/%3E%3C/svg%3E")}#mpr::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7h7l2 2h9v10H3z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7h7l2 2h9v10H3z'/%3E%3C/svg%3E")}#kcB::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4z'/%3E%3Cpath d='M4 7l11-3v3'/%3E%3Cpath d='M16 13h.01'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4z'/%3E%3Cpath d='M4 7l11-3v3'/%3E%3Cpath d='M16 13h.01'/%3E%3C/svg%3E")}#pov::before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='3.2'/%3E%3Cpath d='M6 20a6 6 0 0 1 12 0'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='3.2'/%3E%3Cpath d='M6 20a6 6 0 0 1 12 0'/%3E%3C/svg%3E")}
+#btns{gap:9px}#btns .r2.rb{gap:12px;align-items:flex-end}
+#run{width:74px;height:74px;border-radius:50%!important;font-size:15px!important;padding:0!important}
+#tel{position:relative;width:58px;height:58px;border-radius:50%!important;padding:0!important;display:flex;align-items:center;justify-content:center}
+#tel svg{display:block}
+#fotB{width:58px;height:58px;border-radius:50%!important;padding:0!important;display:flex;align-items:center;justify-content:center}#fotB svg{display:block} /* Ž2b: fotoaparat vlastni tlacitko */
+/* NV4: zbrane (Utok, Zbran, Mirit, zamerny bod, puskohled) */
+#btns .r2.rz{align-items:center;gap:10px}#utok{width:66px;height:66px;border-radius:50%!important;padding:0!important;font-size:14px!important;background:rgba(150,32,24,.62)!important}
+#zbrB.on,#mir.on{background:#e0b04a!important;color:#1b1f24!important;border-color:#fff!important}#zbrB{max-width:38vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hud.drive #btns .rz{display:none}
+#kriz{display:none;position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 0 0 1.5px rgba(0,0,0,.55);pointer-events:none}#kriz.on{display:block}
+#phl{display:none;position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,transparent 0,transparent min(42vw,42vh),#000 calc(min(42vw,42vh) + 2px))}#phl.on{display:block}
+#phl i{position:absolute;left:50%;top:50%;width:min(84vw,84vh);height:min(84vw,84vh);transform:translate(-50%,-50%);background:linear-gradient(#000,#000) center/100% 1.5px no-repeat,linear-gradient(#000,#000) center/1.5px 100% no-repeat;border-radius:50%}
+#phl i::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:#c22}
+#tel[data-n]::after{content:attr(data-n);position:absolute;right:-3px;top:-3px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#e5392e;color:#fff;font-size:11px;font-weight:700;line-height:16px;text-align:center;border:2px solid #fff}
+#hud.drive #tel{display:none}
+#mise{flex-wrap:wrap;max-width:calc(100vw - 180px)}#mise button{padding:8px 13px;font-size:12px}
+#mpr,#kcB{padding:9px 14px}#kcB{position:absolute;left:calc(10px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));display:none;pointer-events:auto;font-variant-numeric:tabular-nums}
+#hud.free.kar #kcB{display:block}#hud.free.kar #mpr{display:none}#kcB.dl{color:var(--bad)}
+#pov{position:absolute;right:calc(152px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));pointer-events:auto;padding:8px 12px;font-size:12px}
+#hud.foto #pov{display:none}
+#hlas{display:none!important} /* Z1: hlaseni mista je v telefonu (aplikace Hlasit misto) */
+#hod{border-radius:10px}
+#msg{background:var(--pan2);border:1px solid var(--hr);max-width:min(50vw,420px)}
+@media (orientation:landscape){#msg{top:calc(58px + env(safe-area-inset-top))}}@media (orientation:portrait){#msg{max-width:86vw}}
+.card{background:rgba(20,24,30,.96);border:1px solid rgba(255,255,255,.08)}
+/* uvod: hlavni menu je v src/ui.css (UI2, patch154) */
+/* telefon (src/telefon.js): na sirku panel vpravo ~40 %, na vysku dole ~55 % */
+#tf{position:fixed;z-index:15;display:none;flex-direction:column;right:calc(8px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));bottom:calc(8px + env(safe-area-inset-bottom));width:clamp(290px,40vw,400px);background:#0f1318;border:1px solid rgba(255,255,255,.14);border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,.5);overflow:hidden;color:#e8ecef;font-size:13px}
+#tf.on{display:flex}
+.tfBar{flex:none;display:flex;align-items:center;gap:8px;height:28px;padding:0 16px;font-size:12px;color:#cfd5db}
+.tfBar b{font-weight:700;font-variant-numeric:tabular-nums}.tfBar span{flex:1;text-align:center;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tfBar i{display:flex;gap:5px;align-items:center}
+.tfObs{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:4px 12px 10px;touch-action:pan-y}
+.tfNav{flex:none;display:flex;height:42px;border-top:1px solid rgba(255,255,255,.08)}
+.tfNav button{flex:1;background:none;border:0;color:#cfd5db;display:flex;align-items:center;justify-content:center}
+.tfNav button:active,.tfAp:active i,#tf button:active{filter:brightness(1.3)}
+.tfHl{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:4px 2px 8px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:8px}
+.tfHl span{font-size:11px;color:#aab3bd;text-transform:uppercase;letter-spacing:.06em}.tfHl b{font-size:15px;color:var(--acc);font-variant-numeric:tabular-nums}
+.tfGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px 2px}
+.tfAp{position:relative;background:none;border:0;color:#e8ecef;display:flex;flex-direction:column;align-items:center;gap:4px;font:inherit;font-size:10.5px;line-height:1.15;padding:2px 0;text-align:center}
+.tfAp i{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2),0 2px 6px rgba(0,0,0,.25)}
+.tfAp.brzy i{opacity:.45}.tfAp.brzy span{color:#8d959e}
+#tf em{font-style:normal;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#e5392e;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.tfAp em{position:absolute;top:-4px;left:calc(50% + 12px)}
+.tfPozn{font-size:11px;color:#8d959e;line-height:1.4;margin:10px 2px 0}.tfPozn:empty{display:none}
+.tfPrazdne{color:#aab3bd;text-align:center;padding:26px 10px;line-height:1.45}
+.tfSub{font-size:11px;color:#aab3bd;text-transform:uppercase;letter-spacing:.05em;margin:12px 2px 5px}
+.tfVl,.tfZa{width:100%;display:flex;align-items:center;gap:10px;text-align:left;font:inherit;color:#e8ecef;background:rgba(255,255,255,.05);border:0;border-radius:12px;padding:9px 10px;margin:0 0 6px}
+.tfVl>i{flex:none;width:34px;height:34px;border-radius:50%;background:#3b4552;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700}
+.tfVl>span{flex:1;min-width:0}.tfVl b{display:block;font-size:13px}.tfVl small{display:block;font-size:12px;color:#aab3bd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfVl time{flex:none;align-self:flex-start;font-size:11px;color:#8d959e}
+.tfChat{display:flex;flex-direction:column;gap:6px;padding-top:4px}.tfBub{max-width:86%;align-self:flex-start;background:#26303b;border-radius:14px 14px 14px 4px;padding:7px 10px}
+.tfBub.ja{align-self:flex-end;background:#2e6b4c;border-radius:14px 14px 4px 14px}.tfBub p{margin:0;font-size:13px;line-height:1.4;user-select:text;-webkit-user-select:text}.tfBub time{display:block;font-size:10px;color:#9aa3ad;margin-top:3px;text-align:right}
+.tfKarta{background:rgba(255,255,255,.05);border-radius:14px;padding:11px 12px;margin:2px 0 8px}.tfKarta small{display:block;font-size:11px;color:#aab3bd;text-transform:uppercase;letter-spacing:.05em}
+.tfKarta b{display:block;font-size:15px;margin:2px 0 4px}.tfKarta p{margin:0;font-size:12.5px;line-height:1.45;color:#cfd5db}
+.tfKarta dl{margin:8px 0 0;font-size:12px;line-height:1.4}.tfKarta dt{color:#8d959e;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;margin-top:5px}.tfKarta dd{margin:0;color:#e3e7eb}
+.tfBtn{display:block;width:100%;font:inherit;font-size:14px;font-weight:600;padding:11px 12px;border-radius:12px;border:0;background:var(--acc);color:#1b1f24;margin:4px 0}
+.tfBtn.s{background:rgba(255,255,255,.1);color:#fff}.tfRad{display:flex;gap:6px}.tfRad .tfBtn{flex:1}
+#tf textarea{width:100%;height:46px;font:inherit;font-size:11px;color:#fff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:6px 8px;resize:none;word-break:break-all;user-select:text;-webkit-user-select:text;touch-action:auto}
+.tfMapa{position:relative}.tfMapa canvas{display:block;width:100%;aspect-ratio:1;border-radius:14px;background:#d8d0c0}
+@media (orientation:landscape){.tfMapa canvas{width:min(100%,calc(100vh - 140px));width:min(100%,calc(100dvh - 140px));margin:0 auto}}
+.tfSeg{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;background:rgba(16,20,26,.8);border-radius:999px;padding:3px}
+.tfSeg button{font:inherit;font-size:11.5px;font-weight:600;color:#cfd5db;background:none;border:0;border-radius:999px;padding:5px 10px}.tfSeg button.on{background:var(--acc);color:#1b1f24}
+.tfZa{display:block}.tfZa>b{display:flex;align-items:baseline;gap:6px;font-size:13px}.tfZa>b small{font-size:11px;color:#aab3bd;font-weight:400}.tfZa>b i{margin-left:auto;font-style:normal;font-size:11px;color:#8d959e;font-weight:400}
+.tfVec{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border-radius:12px;padding:6px 10px;margin:0 0 6px;font-size:13px;min-height:38px}.tfVec>span{flex:1;min-width:0}.tfVec small{display:block;font-size:11px;color:#aab3bd}.tfVec button,.tfCas button{font:inherit;font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:0;border-radius:9px;padding:0 10px;min-height:36px}.tfCas{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 2px 8px;font-size:12px;color:#aab3bd}.tfCas>span{flex:0 0 100%;font-size:13px;color:#e8ecef} /* Ž4: batoh a hotovost */
+.tfZa.w .tfOd>span:not(.ln){white-space:normal;line-height:1.35}.tfZa.off{opacity:.55}
+.tfZa.sel{outline:2px solid var(--acc);outline-offset:-2px;background:rgba(255,255,255,.1)}.tfZa>b i.k{color:var(--acc);font-size:12px} /* Ž2 */
+.tfZk{display:flex;gap:8px;align-items:baseline;width:100%;margin:6px 0 1px;font:inherit;font-size:12px;color:#fff;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:7px 9px;text-align:left}.tfZk b{color:var(--acc)}
+.tfLn{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0 4px}.tfOd{display:flex;align-items:center;gap:6px;font-size:12px;color:#cfd5db;margin-top:3px}.tfOd>span:not(.ln){flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tfOd i{font-style:normal;color:var(--acc);font-variant-numeric:tabular-nums}
+#tf .ln{display:inline-block;min-width:30px;text-align:center;font-weight:700;font-size:11px;color:#fff;border-radius:5px;padding:1px 4px}
+.tfGal{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:6px}.tfGal button{border:0;padding:0;border-radius:6px;overflow:hidden;background:#222;aspect-ratio:16/9}.tfGal img{display:block;width:100%;height:100%;object-fit:cover}
+.tfZust{background:linear-gradient(135deg,#1f7a74,#155a56);border-radius:16px;padding:14px 14px 16px;margin:2px 0 10px}.tfZust small{display:block;font-size:11px;color:#cfe8e5;text-transform:uppercase;letter-spacing:.05em}.tfZust b{display:block;font-size:26px;font-variant-numeric:tabular-nums;margin-top:2px}.tfZust b.dl{color:#ffcfc6}
+.tfPoh div{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.07)}.tfPoh span{flex:1;min-width:0;font-size:12.5px}.tfPoh time{display:block;font-size:10.5px;color:#8d959e}
+.tfPoh b{font-variant-numeric:tabular-nums;font-size:13px}.tfPoh b.p{color:var(--ok)}.tfPoh b.m{color:#ffb4a8}
+.tfNast button{width:100%;display:flex;align-items:center;gap:10px;font:inherit;color:#e8ecef;background:none;border:0;border-bottom:1px solid rgba(255,255,255,.07);padding:11px 2px;text-align:left}.tfNast span{flex:1;font-size:13px}.tfNast b{font-size:12px;color:var(--acc);font-weight:600}
+.tfBrzy{text-align:center;padding:14px 8px}.tfBrzy i{width:64px;height:64px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;color:#fff;opacity:.85}.tfBrzy b{display:block;font-size:17px;margin-top:8px}.tfBrzy small{display:block;color:var(--acc);font-size:12px;margin:2px 0 8px}.tfBrzy p{font-size:12.5px;line-height:1.5;color:#cfd5db;margin:0}
+#tfOzn{position:fixed;z-index:16;left:50%;top:calc(8px + env(safe-area-inset-top));transform:translate(-50%,-12px);width:min(84vw,340px);display:none;background:rgba(22,26,32,.96);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:9px 13px;box-shadow:0 8px 24px rgba(0,0,0,.45);color:#fff;cursor:pointer}
+#tfOzn.on{display:block;animation:tfOz .25s forwards}@keyframes tfOz{to{transform:translate(-50%,0)}}
+/* NV6a: Stin */
+.tfSil{float:right;width:46px;height:88px;margin:-2px 0 4px 8px}.tfSil svg{width:100%;height:100%}.tfOkno{display:grid;grid-template-columns:1fr auto;gap:1px 8px;background:rgba(255,255,255,.04);border-radius:10px;padding:7px 10px;margin:4px 0}.tfOkno b{font-size:13px}.tfOkno span{grid-column:1/3;font-size:12px;color:#c9d1da}.tfOkno small{grid-row:1;grid-column:2;font-size:11px;color:#aab3bd}.tfOkno.on{background:rgba(160,40,40,.28);border:1px solid rgba(255,120,110,.35)}.tfOkno.on small{color:#ffb4aa}.tfChat.stin .tfBub{background:#2a2d33}.tfChat.stin .tfBub.ja{background:#4a2a2a}#tfOzn.stin{background:rgba(30,24,26,.97);border-color:rgba(255,120,110,.3)}#tfOzn.stin b{color:#ff9d90}
+#tfOzn b{display:block;font-size:12px;color:var(--acc)}#tfOzn span{display:block;font-size:13px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfMapB{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}.tfMapB button{width:36px;height:36px;border-radius:10px;border:0;background:rgba(16,20,26,.82);color:#fff;font:inherit;font-size:20px;font-weight:600;line-height:1;display:flex;align-items:center;justify-content:center}.tfMapB button.on{color:var(--acc)}
+.tfMapa canvas{touch-action:none}
+.tfNavI{display:none;align-items:center;gap:8px;background:#1d4f86;border-radius:12px;padding:8px 10px;margin:8px 0 0}.tfNavI.on{display:flex}.tfNavI b{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tfNavI span{font-size:12px;color:#d6e6fb;white-space:nowrap}.tfNavI button{font:inherit;font-size:12px;font-weight:600;color:#fff;background:rgba(255,255,255,.16);border:0;border-radius:999px;padding:5px 10px}
+.tfRez{display:flex;gap:6px;margin:8px 0 0}.tfRez button{flex:1;font:inherit;font-size:13px;font-weight:600;color:#cfd6de;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:7px 0}.tfRez button.on{color:#fff;background:#1d4f86;border-color:#3d7cc4}
+/* NV6b: plan zakazky Stinu v mape telefonu */
+.tfPlan{margin:8px 0 0;padding:7px 8px;border-radius:10px;background:rgba(43,47,54,.55);border:1px solid rgba(255,255,255,.1)}.tfPlan small{display:block;font-size:11px;color:#aab3bd;margin:0 0 5px}.tfPlan div{display:flex;flex-wrap:wrap;gap:5px}.tfPlan button{font:inherit;font-size:12px;font-weight:600;color:#e3e8ee;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:6px 10px}.tfPlan button.on{color:#fff;background:#6b2d2d;border-color:#c25b5b}.tfPlan button.s{color:#aab3bd;background:none}.tfPlan span{display:block;font-size:11px;color:#c3cad2;margin:5px 2px 0}.tfNavK{margin:4px 0 0}.tfKrok{display:flex;gap:9px;align-items:center;padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.07)}.tfKrok i{flex:none;min-width:30px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700;font-size:13px;color:#fff;padding:0 4px}.tfKrok i.p{min-width:30px;background:none;border:2px dotted #8fb5e3;border-radius:50%;height:14px;width:14px;min-width:14px;margin:0 8px}.tfKrok span{min-width:0}.tfKrok b{display:block;font-size:13px}.tfKrok small{display:block;font-size:12px;color:#aab3bd}.tfKrok.hot{opacity:.45}
+#tfHled{display:block;width:100%;margin:8px 0 4px;font:inherit;font-size:14px;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 12px;user-select:text;-webkit-user-select:text;touch-action:auto}
+.tfVys{width:100%;display:flex;align-items:baseline;gap:8px;font:inherit;color:#e8ecef;background:none;border:0;border-bottom:1px solid rgba(255,255,255,.07);padding:9px 2px;text-align:left}.tfVys b{flex:1;font-size:13px;font-weight:600}.tfVys i{font-style:normal;font-size:11px;color:#8d959e}
+.tfCile{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}.tfCile:empty{display:none}.tfCile button{font:inherit;font-size:12px;font-weight:600;color:#fff;background:rgba(255,255,255,.1);border:0;border-radius:999px;padding:7px 12px}
+#mini{pointer-events:auto;cursor:pointer}
+/* Ž3 cast 2: prolog. #napo = pruh napovedy krok po kroku (na sirku dole uprostred mezi joystickem a tlacitky, na vysku pod horni listou; klepnuti ho schova), #roz = rozhovor s Markem */
+#napo{position:absolute;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:min(42vw,430px);display:none;box-sizing:border-box;padding:7px 12px;border-radius:12px;background:var(--pan2);border:1px solid var(--hr);border-left:3px solid var(--acc);font-size:12.5px;line-height:1.35;pointer-events:auto;cursor:pointer}
+#napo.on{display:block}#hud.foto #napo{display:none}
+#roz{position:absolute;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(88vw,470px);display:none;box-sizing:border-box;padding:10px 13px 11px;border-radius:14px;background:var(--pan2);border:1px solid var(--hr);pointer-events:auto;z-index:3}
+#roz.on{display:block}#roz b{display:block;font-size:11px;color:#aab3bd;text-transform:uppercase;letter-spacing:.05em}#roz p{margin:4px 0 9px;font-size:14px;line-height:1.4}
+#roz button{font:inherit;font-size:14px;font-weight:600;padding:9px 20px;border-radius:999px;border:0;background:var(--acc);color:#1b1f24;float:right}
+@media (orientation:landscape){#hud.tf #napo{left:39%;max-width:34vw}}
+@media (orientation:portrait){#napo{left:calc(10px + env(safe-area-inset-left));right:calc(10px + env(safe-area-inset-right));bottom:auto;top:calc(196px + env(safe-area-inset-top));transform:none;width:auto;max-width:none}#roz{bottom:calc(190px + env(safe-area-inset-bottom))}}
+@media (max-width:600px) and (orientation:portrait){#hud.napo #msg{top:calc(196px + var(--napoH,0px) + env(safe-area-inset-top))}}
+@media (max-width:600px) and (orientation:portrait){#tfOzn{top:calc(196px + var(--napoH,0px) + env(safe-area-inset-top))}#msg{top:calc(196px + env(safe-area-inset-top))}}
+@media (max-height:400px){.tfAp i{width:42px;height:42px;border-radius:13px}.tfGrid{gap:6px 2px}.tfHl{padding-bottom:6px;margin-bottom:6px}}
+@media (max-height:380px) and (orientation:landscape){#pov{right:calc(132px + env(safe-area-inset-right))}}
+@media (max-width:600px) and (orientation:portrait){#pov{right:calc(124px + env(safe-area-inset-right))}#mise{max-width:calc(100vw - 140px)}}
+</style>
+<style>/* UI2 (patch154): pisma Barlow a Barlow Condensed (SIL OFL 1.1, Jeremy Tribby; npm @fontsource), jen latin a latin-ext; soubory kopiruje tools/build.sh do dist/fonts */
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/barlow-latin-ext-400-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/barlow-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/barlow-latin-ext-500-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/barlow-latin-500-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/barlow-latin-ext-600-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/barlow-latin-600-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/barlow-latin-ext-700-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Barlow';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/barlow-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/barlow-condensed-latin-ext-500-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/barlow-condensed-latin-500-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/barlow-condensed-latin-ext-600-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/barlow-condensed-latin-600-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/barlow-condensed-latin-ext-700-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/barlow-condensed-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+/* UI2 (patch154, Pavel 26. 11.: "predelat kompletne UI hry, uvodni obrazovka s menu, telefon, obchody jako opravdove e-shopy, nastaveni;
+   podle realnych her, at to nevypada jako AI"). Vzor: Hitman (ostre hrany, menu vlevo, vybrany radek = plny svetly blok, nastaveni
+   po kategoriich), Watch Dogs 2 (telefon jako skutecny Android, kazdy obchod se svou znackou). Barvy: grafit, krem a cervena
+   prazske tramvaje. Pisma Barlow / Barlow Condensed (src/ui_fonty.css). Tento soubor vklada tools/build.sh za puvodni styly
+   v index.template.html (prepisuje jejich vzhled; poloha a chovani HUD zustava tam). */
+:root{
+  --ink:#0b0c0e;--g1:#121417;--g2:#1a1d21;--g3:#24282d;--ln:rgba(236,232,223,.13);--ln2:rgba(236,232,223,.26);
+  --tx:#ece8df;--tx2:#aaa9a5;--tx3:#74757a;--red:#c8282e;--red2:#e0453f;--cream:#efe6cf;--ok:#7fcf95;--warn:#e8b04a;--bad:#ef6a5a;
+  --acc:#efe6cf;--pan:rgba(13,14,17,.74);--pan2:rgba(13,14,17,.92);--hr:rgba(236,232,223,.16);
+  --f:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--fc:'Barlow Condensed','Barlow','Arial Narrow',sans-serif;
+}
+html,body{font-family:var(--f);color:var(--tx)}
+button{font-family:inherit}
+#loading{flex-direction:column;gap:0;background:#0b0c0e radial-gradient(120% 80% at 50% 120%,#2a1a16 0%,#0b0c0e 60%);font:600 14px/1 var(--fc);letter-spacing:.24em;text-transform:uppercase;color:var(--tx2)}
+#loading::before{content:'Stín';order:-2;font:700 clamp(64px,18vh,120px)/.84 var(--fc);letter-spacing:.01em;color:var(--tx)}
+#loading::after{content:'nad Starým Městem';order:-1;margin:8px 0 34px;padding-bottom:20px;font:600 clamp(14px,3.4vh,20px)/1 var(--fc);letter-spacing:.26em;color:var(--cream);border-bottom:3px solid var(--red);animation:uiBl 1.2s ease-in-out infinite alternate}
+@keyframes uiBl{to{border-bottom-color:rgba(200,40,46,.25)}}
+
+/* ---------- HUD ---------- */
+body:has(#intro.on) #hud,body:has(#pauza.on) #hud,body:has(#intro.on) #tfOzn{visibility:hidden}
+.pan{background:var(--pan);border:1px solid var(--hr);border-radius:2px;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+#tl.pan{border:0;border-left:3px solid var(--red);border-radius:0 2px 2px 0;background:rgba(13,14,17,.8);font-size:12.5px}
+#tl .row{font-weight:500}#oko{font:600 14px/1 var(--fc);letter-spacing:.05em;text-transform:uppercase}
+#hud #btns>button,#hud #btns .rz button:not(#utok),#hud #mise button,#hud #fotoB button:not(#fSnap),#hud #mpr,#hud #kcB,#hud #pov{
+  font:600 15px/1 var(--fc);letter-spacing:.05em;text-transform:uppercase;color:var(--tx);height:40px;padding:0 14px 0 12px;
+  line-height:38px;background:rgba(13,14,17,.74);border:1px solid rgba(236,232,223,.24);border-radius:2px;box-shadow:0 1px 0 rgba(0,0,0,.25);backdrop-filter:none;-webkit-backdrop-filter:none}
+#hud #btns>button::before,#hud #mise button::before,#hud #mpr::before,#hud #kcB::before,#hud #pov::before{width:17px;height:17px;margin:0 9px 0 0;vertical-align:-3px;opacity:.95}
+#hud #btns>button:active,#hud #mise button:active,#hud #mpr:active,#hud #kcB:active,#hud #pov:active{background:var(--cream);color:var(--ink)}
+#hud #mzde.on,#hud #mmisto.on,#hud #mpr{background:var(--cream)!important;color:var(--ink);border-color:var(--cream)}
+#hud #kcB{font-variant-numeric:tabular-nums;font-size:17px;letter-spacing:.02em;text-transform:none}#hud #kcB.dl{color:var(--bad)}
+#hud #run,#hud #tel,#hud #fotB,#hud #utok,#hud #pedals button{background:rgba(13,14,17,.6)!important;border:1.5px solid rgba(236,232,223,.6)!important;color:var(--tx)!important;box-shadow:0 2px 10px rgba(0,0,0,.25);backdrop-filter:none}
+#hud #run{font:700 16px/1 var(--fc)!important;letter-spacing:.08em;text-transform:uppercase}
+#hud #run.on,#hud #tel.on,#hud #fotB.on,#hud #zbrB.on,#hud #mir.on{background:var(--cream)!important;color:var(--ink)!important;border-color:var(--cream)!important}
+#hud #utok{background:rgba(150,26,24,.7)!important;border-color:rgba(255,190,180,.7)!important;font:700 15px/1 var(--fc)!important;text-transform:uppercase;letter-spacing:.06em}
+#hud #kryt{font:700 13px/1 var(--fc)!important;text-transform:uppercase;letter-spacing:.06em;touch-action:none}#hud #kryt.on{background:rgba(236,232,223,.42)!important;color:#111!important} /* patch162: kryt predloktim (drzet) */
+#hud #pedals button{font:700 15px/1 var(--fc)!important;text-transform:uppercase;letter-spacing:.06em}
+#hud #gas{background:rgba(30,92,52,.7)!important}#hud #brk{background:rgba(130,30,26,.7)!important}
+#hud #tel[data-n]::after{background:var(--red);border:2px solid var(--ink);border-radius:2px;font-family:var(--fc);font-size:12px}
+#joy{background:rgba(13,14,17,.22);border:1.5px solid rgba(236,232,223,.42)}#knob{background:rgba(236,232,223,.9);box-shadow:0 2px 8px rgba(0,0,0,.35)}
+#mini{border:2px solid rgba(236,232,223,.92);box-shadow:0 0 0 1px rgba(0,0,0,.35),0 3px 12px rgba(0,0,0,.3)}
+#hod.pan{font:600 12.5px/1.25 var(--fc);letter-spacing:.04em;border:0;background:rgba(13,14,17,.7)}
+#msg{background:rgba(13,14,17,.92);border:0;border-left:3px solid var(--red);border-radius:0;font:500 14px/1.35 var(--f);padding:9px 14px 9px 12px;box-shadow:0 4px 18px rgba(0,0,0,.35)}
+#spd.pan{font:700 26px/1 var(--fc);letter-spacing:.02em;border:0;border-left:3px solid var(--red);border-radius:0}
+#attr{font-size:9.5px;color:rgba(236,232,223,.7)}
+#napo{background:rgba(13,14,17,.9)!important;border:0!important;border-left:3px solid var(--cream)!important;border-radius:0!important;font:500 14px/1.35 var(--f)}
+#roz{background:rgba(13,14,17,.94)!important;border:0!important;border-left:3px solid var(--red)!important;border-radius:0!important}
+#roz b{font:700 13px/1 var(--fc)!important;letter-spacing:.12em!important;color:var(--cream)!important}
+#roz button{border-radius:2px!important;background:var(--cream)!important;color:var(--ink)!important;font:700 15px/1 var(--fc)!important;text-transform:uppercase;letter-spacing:.06em;padding:11px 22px!important}
+#nova{font-family:var(--fc)}
+/* menu ve hre (≡) a pohled: ctverce vlevo od minimapy */
+#menuB{position:absolute;right:calc(152px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));width:40px;height:40px;pointer-events:auto;
+  background:rgba(13,14,17,.74);border:1px solid rgba(236,232,223,.24);border-radius:2px;color:var(--tx);display:flex;align-items:center;justify-content:center;padding:0}
+#menuB:active{background:var(--cream);color:var(--ink)}
+#hud #pov{position:absolute;right:calc(200px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));font-size:13.5px}
+#hud.foto #menuB,#hud.tf #menuB{display:none}
+@media (max-height:380px) and (orientation:landscape){#menuB{right:calc(132px + env(safe-area-inset-right))}#hud #pov{right:calc(180px + env(safe-area-inset-right))}}
+@media (max-width:600px) and (orientation:portrait){#menuB{right:calc(124px + env(safe-area-inset-right))}#hud #pov{right:calc(172px + env(safe-area-inset-right));width:40px;padding:0;font-size:0;text-align:center}#hud #pov::before{margin:0;vertical-align:-2px}}
+
+/* ---------- prekryvy (Pripady, spis, vysledek, profil, odjezdy, zadrzeni, hlaseni) ---------- */
+.ov{background:rgba(8,9,11,.64)}
+.ov .card{background:var(--g1);border:1px solid var(--ln);border-radius:2px;box-shadow:0 24px 70px rgba(0,0,0,.6);padding:20px 20px 16px;position:relative}
+.ov .card::before{content:'';position:absolute;left:20px;top:0;width:44px;height:3px;background:var(--red)}
+.ov .card h1{font:700 27px/1.02 var(--fc);text-transform:uppercase;letter-spacing:.03em;margin:2px 0 6px}
+.ov .card .sub{font-size:12.5px;color:var(--tx2);line-height:1.4}
+.ov .card p{color:#dedad1}.ov .card ul{color:#cdc9c0}
+.ov .card button{border-radius:2px;font:700 16px/1 var(--fc);text-transform:uppercase;letter-spacing:.07em;padding:14px 14px 13px;background:var(--cream);color:var(--ink)}
+.ov .card button.s{background:transparent;color:var(--tx);box-shadow:inset 0 0 0 1px var(--ln2)}
+.ov .card button:active{filter:brightness(.88)}
+.ov .card.dlouha .b{background:var(--g1);border-top:1px solid var(--ln)}
+.ov .card .pole i{font:600 11px/1.2 var(--fc);letter-spacing:.14em;color:var(--tx3)}
+.ov .card button.pr{font:inherit;text-transform:none;letter-spacing:0;background:rgba(236,232,223,.04);border:1px solid var(--ln);border-left:3px solid var(--ln2);border-radius:2px;color:var(--tx);padding:10px 12px}
+.ov .card button.pr b{font:700 16px/1.15 var(--fc);letter-spacing:.03em;text-transform:uppercase}
+.ov .card button.pr:active,.ov .card button.pr:hover{border-left-color:var(--red);background:rgba(236,232,223,.08)}
+.ov .card button.pr .kdy{color:var(--warn)}
+.ov .card textarea,.ov .card input{border-radius:2px;background:rgba(236,232,223,.06);border-color:var(--ln2)}
+.karV{border-radius:2px;background:rgba(239,230,207,.07);border-color:rgba(239,230,207,.3)}
+.odz{border-radius:2px}.odz.ma{border-color:var(--cream)}.odz b{color:var(--cream)}
+#vyhC h1.ok,#end.ok h1{color:var(--ok)}#vyhC h1.bad,#end h1,#zad h1{color:var(--bad)}
+.card .hv{color:var(--cream)}
+/* spis = papirovy spis se strojopisem */
+.ov .card.spis{background:#e9e1cb;color:#2a251d;border:0;box-shadow:0 24px 70px rgba(0,0,0,.6),inset 0 0 0 1px rgba(0,0,0,.08);
+  background-image:repeating-linear-gradient(0deg,transparent 0 23px,rgba(80,60,30,.06) 23px 24px)}
+.ov .card.spis::before{background:#b3261e}
+.ov .card.spis h1{color:#2a251d}.ov .card.spis .sub{color:#615848}
+.ov .card.spis .pole i{color:#7a6f5c;font-family:ui-monospace,'Courier New',monospace;font-weight:700;letter-spacing:.06em;font-size:10.5px}
+.ov .card.spis .pole{color:#2a251d}.spisO{font-family:ui-monospace,'Courier New',monospace;letter-spacing:.04em}
+.ov .card.dlouha.spis .b{background:#e9e1cb;border-top-color:rgba(0,0,0,.12)}
+.ov .card.spis button{background:#2a251d;color:#efe6cf}.ov .card.spis button.s{background:transparent;color:#2a251d;box-shadow:inset 0 0 0 1px rgba(42,37,29,.4)}
+.raz{border-radius:1px;font-family:var(--fc);letter-spacing:.18em}
+
+/* ---------- uvodni obrazovka a hlavni menu (#intro) ---------- */
+#intro.ov{padding:0;background:none;align-items:stretch;justify-content:stretch;z-index:22}
+#intro::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(8,9,11,.95) 0%,rgba(8,9,11,.88) 30%,rgba(8,9,11,.5) 58%,rgba(8,9,11,.12) 100%),linear-gradient(0deg,rgba(8,9,11,.75) 0%,transparent 38%)}
+.mm{position:relative;flex:1;display:grid;grid-template-columns:minmax(250px,32%) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;column-gap:clamp(18px,4vw,56px);
+  padding:max(20px,env(safe-area-inset-top)) max(28px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(28px,env(safe-area-inset-left));overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.mmLogo{grid-column:1;grid-row:1;margin:0 0 18px}
+.mmK{display:flex;align-items:center;gap:10px;font:600 12px/1 var(--fc);letter-spacing:.24em;text-transform:uppercase;color:var(--tx2);margin:0 0 12px}
+.mmK i{width:10px;height:10px;background:var(--red);flex:none}
+.mmLogo h1{margin:0;font-weight:400}
+.mmLogo h1 b{display:block;font:700 clamp(50px,13vh,92px)/.84 var(--fc);text-transform:uppercase;letter-spacing:.005em;color:var(--tx)}
+.mmLogo h1 span{display:block;margin-top:6px;font:600 clamp(14px,3.4vh,21px)/1.1 var(--fc);text-transform:uppercase;letter-spacing:.26em;color:var(--cream)}
+.mmNav{grid-column:1;grid-row:2;display:flex;flex-direction:column;gap:2px;align-self:start}
+.mm .mmI{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:40px;padding:0 14px;border:0;border-radius:0;background:transparent;color:var(--tx);text-align:left;cursor:pointer;
+  font:600 21px/1 var(--fc);text-transform:uppercase;letter-spacing:.07em}
+.mm .mmI small{margin-left:auto;font:500 12.5px/1.2 var(--f);text-transform:none;letter-spacing:0;color:var(--tx3);text-align:right;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mm .mmI.on,.mm .mmI:active{background:var(--cream);color:var(--ink)}
+.mm .mmI.on small,.mm .mmI:active small{color:#5d584d}
+.mm .mmI.on::before{content:'';position:absolute;left:-10px;top:0;bottom:0;width:4px;background:var(--red)}
+@media (hover:hover){.mm .mmI:hover:not(.on){background:rgba(236,232,223,.09)}}
+.mm .mmI.mmSep{margin-top:10px}
+.mm .mmI.on.mmZ{background:transparent;color:var(--tx)}.mm .mmI.on.mmZ::before{display:none}.mm .mmI.on.mmZ small{color:var(--tx3)}
+.mmDet{grid-column:2;grid-row:1/3;max-width:520px;min-height:0;overflow:auto;display:flex;flex-direction:column;padding:0 0 6px;touch-action:pan-y}
+.mmP{display:none;margin-top:auto}
+#intro.k:not(.po) #uvK,#intro.v:not(.po) #uvV,#intro.po #uvO{display:block}
+.mmH{display:flex;align-items:baseline;gap:12px;font:700 30px/1 var(--fc);text-transform:uppercase;letter-spacing:.03em;margin:0 0 10px;padding-top:12px;border-top:1px solid var(--ln2)}
+.mmH small{font:600 12px/1 var(--fc);letter-spacing:.2em;color:var(--red2)}
+.mmP p{font-size:14.5px;line-height:1.5;color:#d9d5cc;margin:0 0 12px;max-width:470px}
+.mmSt{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:1px;margin:0 0 14px;background:var(--ln)}
+.mmSt div{background:rgba(13,14,17,.88);padding:9px 11px}
+.mmSt dt{font:600 10.5px/1 var(--fc);letter-spacing:.18em;text-transform:uppercase;color:var(--tx3);margin:0 0 5px}
+.mmSt dd{margin:0;font:600 18px/1.1 var(--fc);letter-spacing:.02em;font-variant-numeric:tabular-nums;color:var(--tx)}
+.mm .b{display:flex;flex-wrap:wrap;gap:8px}
+.mm .b button{flex:0 0 auto;min-width:0;height:46px;padding:0 20px;border:0;border-radius:2px;background:var(--cream);color:var(--ink);font:700 17px/1 var(--fc);text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
+.mm .b button.s{background:rgba(13,14,17,.55);color:var(--tx);box-shadow:inset 0 0 0 1px var(--ln2)}
+.mm .b button:active{filter:brightness(.85)}
+.mm .b #pokr{flex-basis:100%;background:var(--red);color:#fff}
+.mmTip{list-style:none;padding:0;margin:0 0 12px;max-width:500px}
+.mmTip li{position:relative;padding:0 0 0 18px;margin:0 0 6px;font-size:13px;line-height:1.45;color:#cfcbc2}
+.mmTip li::before{content:'';position:absolute;left:2px;top:7px;width:6px;height:6px;background:var(--red)}
+@media (pointer:coarse){.mmKl{display:none!important}}
+.mmKl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0 0 12px;font-size:13px;color:#cfcbc2}
+.mmKl kbd{font:600 12px/1 var(--fc);letter-spacing:.06em;color:var(--ink);background:var(--cream);padding:4px 6px 3px;border-radius:1px;justify-self:start;white-space:nowrap}
+.mmF{grid-column:1/3;grid-row:3;display:flex;justify-content:space-between;gap:16px;margin-top:14px;font-size:10.5px;color:var(--tx3);line-height:1.35}
+.mmF b{font:600 11px/1 var(--fc);letter-spacing:.16em;text-transform:uppercase;color:var(--tx2);white-space:nowrap}
+@media (max-height:430px) and (orientation:landscape){
+  .mm{padding-top:max(14px,env(safe-area-inset-top))}.mmLogo{margin-bottom:10px}.mmK{margin-bottom:7px}
+  .mmLogo h1 b{font-size:clamp(40px,13vh,58px)}.mm .mmI{min-height:33px;font-size:18px}.mm .mmI small{font-size:11.5px}
+  .mmH{font-size:24px;margin-bottom:7px;padding-top:9px}.mmP p{font-size:13px;margin-bottom:9px}.mmSt{margin-bottom:10px}.mmSt div{padding:6px 9px}.mmSt dd{font-size:16px}
+  .mm .b button{height:40px;padding:0 15px;font-size:15px}.mmTip li{font-size:12px;margin-bottom:3px}.mmF{margin-top:8px}
+}
+@media (orientation:portrait),(max-width:640px){
+  .mm{grid-template-columns:1fr;grid-template-rows:auto auto auto auto}
+  #intro::before{background:linear-gradient(180deg,rgba(8,9,11,.55) 0%,rgba(8,9,11,.88) 34%,rgba(8,9,11,.96) 100%)}
+  .mmLogo{grid-column:1;grid-row:1;margin-top:8vh}.mmNav{grid-column:1;grid-row:2}.mmDet{grid-column:1;grid-row:3;align-self:start;margin-top:18px}.mmF{grid-column:1;grid-row:4;flex-direction:column;gap:4px}
+}
+
+/* ---------- nastaveni hry (#nastO) a menu ve hre (#pauza) ---------- */
+.sx{position:relative;width:min(860px,100%);max-height:100%;display:grid;grid-template-columns:190px 1fr;grid-template-rows:auto 1fr;background:var(--g1);border:1px solid var(--ln);border-radius:2px;box-shadow:0 24px 70px rgba(0,0,0,.6);overflow:hidden}
+.sxH{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:14px 16px 12px 20px;border-bottom:1px solid var(--ln);position:relative}
+.sxH::before{content:'';position:absolute;left:20px;top:0;width:44px;height:3px;background:var(--red)}
+.sxH b{flex:1;font:700 26px/1 var(--fc);text-transform:uppercase;letter-spacing:.04em}
+.sxH button{height:38px;padding:0 16px;border:0;border-radius:2px;background:transparent;color:var(--tx);box-shadow:inset 0 0 0 1px var(--ln2);font:700 15px/1 var(--fc);letter-spacing:.08em;text-transform:uppercase}
+.sxT{display:flex;flex-direction:column;padding:10px 0;border-right:1px solid var(--ln);overflow:auto}
+.sxT button{display:flex;align-items:center;gap:10px;height:40px;padding:0 16px 0 20px;border:0;background:transparent;color:var(--tx2);font:600 17px/1 var(--fc);letter-spacing:.07em;text-transform:uppercase;text-align:left;position:relative}
+.sxT button.on{background:var(--cream);color:var(--ink)}.sxT button.on::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--red)}
+.sxL{padding:8px 18px 18px;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+.sxR{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--ln)}
+.sxR>span{flex:1;min-width:0;font:600 15.5px/1.2 var(--f)}
+.sxR>span small{display:block;margin-top:3px;font:400 12px/1.35 var(--f);color:var(--tx3)}
+.sxV{display:flex;flex:none;gap:1px;background:var(--ln);padding:1px}
+.sxV button{min-width:58px;height:36px;padding:0 11px;border:0;border-radius:0;background:var(--g2);color:var(--tx2);font:600 14.5px/1 var(--fc);letter-spacing:.05em;text-transform:uppercase}
+.sxV button.on{background:var(--cream);color:var(--ink)}
+.sxV button:active{filter:brightness(1.25)}
+.sxR.info{display:block;color:var(--tx2);font-size:13px;line-height:1.5}
+.sxA{display:inline-flex;align-items:center;height:38px;margin:14px 8px 0 0;padding:0 16px;border:0;border-radius:2px;background:transparent;color:var(--tx);box-shadow:inset 0 0 0 1px var(--ln2);font:700 15px/1 var(--fc);letter-spacing:.08em;text-transform:uppercase}
+@media (max-height:430px) and (orientation:landscape){.sxH{padding:9px 12px 8px 18px}.sxH b{font-size:21px}.sxT button{height:34px;font-size:15px}.sxR{padding:8px 0}.sxR>span{font-size:14px}.sxV button{height:32px;min-width:50px;font-size:13.5px}}
+@media (orientation:portrait),(max-width:640px){.sx{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}.sxT{flex-direction:row;padding:0;border-right:0;border-bottom:1px solid var(--ln);overflow-x:auto}
+  .sxT button{flex:none;padding:0 14px;height:42px}.sxT button.on::before{left:0;right:0;top:auto;bottom:0;width:auto;height:3px}.sxR{flex-wrap:wrap}.sxV{width:100%}.sxV button{flex:1}}
+#nastO,#pauza{z-index:24}
+#pauza{align-items:stretch;justify-content:flex-start;padding:0;background:linear-gradient(90deg,rgba(8,9,11,.94) 0%,rgba(8,9,11,.8) 36%,rgba(8,9,11,.25) 70%,rgba(8,9,11,.05))}
+#pauza .mm{grid-template-columns:minmax(250px,32%) 1fr}
+#pauza .mmLogo h1 b{font-size:clamp(34px,9vh,56px)}
+
+/* ---------- telefon (#tf, src/telefon.js): skutecny telefon s ramem ---------- */
+#tf{right:calc(10px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));bottom:calc(8px + env(safe-area-inset-bottom));width:clamp(300px,40vw,380px);
+  padding:6px;background:#09090b;border:0;border-radius:32px;overflow:visible;color:#eceef0;font:13.5px/1.35 var(--f);
+  box-shadow:0 0 0 1.5px #3b3e44,0 0 0 3px #111214,0 22px 60px rgba(0,0,0,.65)}
+#tf::before{content:'';position:absolute;right:-4px;top:22%;width:3px;height:44px;border-radius:0 2px 2px 0;background:#2c2f34}
+#tf::after{content:'';position:absolute;right:-4px;top:calc(22% + 58px);width:3px;height:26px;border-radius:0 2px 2px 0;background:#2c2f34}
+@media (orientation:portrait){#tf{left:calc(8px + env(safe-area-inset-left));right:calc(8px + env(safe-area-inset-right));top:auto;bottom:calc(6px + env(safe-area-inset-bottom));width:auto;height:58vh;height:58dvh;border-radius:30px}
+  #hud.tf #joy{bottom:calc(58vh + 18px);bottom:calc(58dvh + 18px)}#hud.tf #btns{display:none}}
+@media (orientation:landscape){#hud.tf #btns,#hud.tf #mini,#hud.tf #hod,#hud.tf #pov{display:none}#hud.tf #msg{left:30%;max-width:min(52vw,420px)}#hud.tf #attr{left:30%}}
+.tfScr{position:relative;flex:1;display:flex;flex-direction:column;min-height:0;border-radius:26px;overflow:hidden;background:#0e1013}
+.tfScr.sc_domu{background:#10141b url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 700' preserveAspectRatio='xMidYMax slice'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%230d1420'/%3E%3Cstop offset='.5' stop-color='%2322344f'/%3E%3Cstop offset='.76' stop-color='%237d4b46'/%3E%3Cstop offset='.9' stop-color='%23c9774a'/%3E%3Cstop offset='1' stop-color='%23e09455'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='700' fill='url(%23g)'/%3E%3Ccircle cx='318' cy='150' r='14' fill='%23f3e6c8' opacity='.85'/%3E%3Cpath fill='%23121a27' d='M0 700V612L60 596L120 600L200 590L290 598L400 606V700Z'/%3E%3Cpath fill='%230b0e14' d='M0 700V604H22L29 604L32 532H30.5V528H32.5L34 470H36L37.5 528H39.5V532H38L41 604H70L92 578L104 566H118V548L124 542H148V522L152 514H157V482L160.5 462L164 482V514H167V482L170.5 462L174 482V514H186V500L190 472L194 446L198 472L202 500V514H212V522L216 540H246V550L262 560L292 568L304 592H314V564L325 532L336 564V592H344V580H352V592H357V560L363 522L369 560H375V560L381 526L387 560V592H400V700Z'/%3E%3Cg fill='%23e9b660' opacity='.85'%3E%3Crect x='128' y='546' width='3' height='3'/%3E%3Crect x='136' y='546' width='3' height='3'/%3E%3Crect x='224' y='546' width='3' height='3'/%3E%3Crect x='232' y='546' width='3' height='3'/%3E%3Crect x='240' y='546' width='3' height='3'/%3E%3Crect x='190' y='520' width='3' height='4'/%3E%3Crect x='323' y='572' width='3' height='4'/%3E%3C/g%3E%3Cpath d='M0 650H400' stroke='%23e09455' stroke-opacity='.25' stroke-width='2'/%3E%3C/svg%3E") center bottom/cover no-repeat}
+.tfScr.web{background:#fff}
+.tfBar{position:relative;z-index:3;height:28px;padding:2px 22px 0;color:#f2f3f5;font:600 12.5px/1 var(--f)}
+.tfBar b{font-weight:600}.tfBar span{display:none}.tfBar i{margin-left:auto;gap:5px}
+.tfBar::after{content:'';position:absolute;left:50%;top:8px;width:11px;height:11px;margin-left:-5.5px;border-radius:50%;background:#000;box-shadow:0 0 0 1.5px #1b1d21}
+.tfScr.web .tfBar,.tfScr.sc_jizdenky .tfBar{background:#16181b}
+.tfObs{position:relative;padding:0 12px 12px;scroll-behavior:auto}
+.tfNav{height:38px;border-top:0;background:#0b0c0e;padding:0 22px}
+.tfScr.sc_domu .tfNav{background:transparent}
+.tfNav button{color:#e9eaec;opacity:.85}.tfNav button svg{width:20px;height:20px}
+/* hlavicka aplikace */
+.tfAH{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:4px;margin:0 -12px 10px;padding:4px 12px 6px 4px;min-height:48px;
+  background:color-mix(in srgb,var(--ap) 34%,#121418);border-bottom:1px solid rgba(255,255,255,.06)}
+.tfAH b{flex:1;min-width:0;font:600 18px/1.15 var(--f);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfAHz{flex:none;width:40px;height:40px;border:0;border-radius:50%;background:transparent;color:#fff;display:flex;align-items:center;justify-content:center}
+.tfAHz:active{background:rgba(255,255,255,.12)}
+/* domovska obrazovka */
+.tf_domu{display:flex;flex-direction:column;padding:0 14px 0!important}
+.tfWid{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:10px 4px 8px;text-shadow:0 1px 6px rgba(0,0,0,.45)}
+.tfWid b{flex:0 0 100%;font:500 52px/1 var(--f);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:#fff}
+.tfWid span{font-size:13px;font-weight:500;color:#e8ebef}.tfWid span::first-letter{text-transform:uppercase}
+.tfWp{display:inline-flex;align-items:center;gap:5px}
+.tfWb{display:flex;align-items:center;justify-content:space-between;width:100%;margin:2px 0 12px;padding:10px 14px;border:0;border-radius:18px;background:rgba(14,18,24,.55);color:#fff;text-align:left}
+.tfWb small{font-size:11.5px;color:#c9ced6}.tfWb b{font:600 19px/1 var(--f);font-variant-numeric:tabular-nums}
+#tf .tfGrid{grid-template-columns:repeat(4,1fr);gap:12px 4px;flex:1;align-content:start}
+#tf .tfAp{font:500 11px/1.15 var(--f);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7);gap:5px}
+#tf .tfAp span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfIc{width:50px;height:50px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-style:normal;
+  background:linear-gradient(165deg,color-mix(in srgb,var(--ic) 74%,#fff) 0%,var(--ic) 46%,color-mix(in srgb,var(--ic) 80%,#000) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 3px 8px rgba(0,0,0,.35)}
+#tf .tfAp.brzy .tfIc{filter:grayscale(.85) brightness(.75)}#tf .tfAp.brzy span{color:#b7bcc4}
+#tf .tfAp em{top:-5px;left:calc(50% + 14px);border:2px solid #10141b}
+.tfDock{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:10px -4px 8px;padding:9px 6px 8px;border-radius:24px;background:rgba(18,22,28,.62)}
+.tfDock .tfAp span{display:none}
+@media (max-height:430px){.tfWid{padding:4px 4px 2px}.tfWid b{font-size:30px;flex:0 0 auto}.tfWid>span:not(.tfWp){display:none}.tfWb{margin-bottom:8px;padding:6px 12px}.tfWb b{font-size:16px}.tfIc{width:42px;height:42px;border-radius:12px}.tfIc svg{width:23px;height:23px}
+  #tf .tfGrid{grid-template-columns:repeat(5,1fr);gap:8px 2px;flex:none}#tf .tfAp{font-size:10.5px}.tfDock{position:static;margin:10px -4px 8px;padding:6px}}
+/* spolecne prvky aplikaci */
+#tf .tfSub{font:600 11px/1.2 var(--f);letter-spacing:.06em;color:#9aa1aa;margin:14px 4px 6px}
+#tf .tfPozn{color:#8b929b;font-size:11.5px}
+#tf .tfKarta,#tf .tfVl,#tf .tfZa,#tf .tfVec,#tf .tfOkno{background:#1a1d22;border-radius:14px}
+#tf .tfVl,#tf .tfZa{padding:10px 12px}
+#tf .tfZa>b i{color:#eef0f2;font-weight:600}
+#tf .tfBtn{border-radius:22px;background:#eef0f2;color:#121418;font:600 14px/1.2 var(--f);padding:12px}
+#tf .tfBtn.s{background:#262a30;color:#eef0f2}
+#tf .tfZust{background:#1d6f62;border-radius:18px}
+#tf .tfHl{border-bottom-color:rgba(255,255,255,.07)}#tf .tfHl b{color:#eef0f2}
+#tf em{background:#e5392e}
+#tf .tfZa.sel{outline-color:#eef0f2}
+/* zpravy jako messenger */
+.tf_zpravy .tfVl{background:transparent!important;border-radius:0!important;border-bottom:1px solid rgba(255,255,255,.06);padding:10px 4px!important;margin:0}
+.tf_zpravy .tfVl>i,.tf_stin .tfVl>i{width:42px;height:42px;background:linear-gradient(160deg,#5a6b80,#36414f);font-size:17px}
+.tfChat .tfBub{background:#23272d;border-radius:18px 18px 18px 5px;padding:8px 12px}
+.tfChat .tfBub.ja{background:#2b6b4f;border-radius:18px 18px 5px 18px}
+.tfChat.stin .tfBub{background:#2a1d1f}.tfChat.stin .tfBub.ja{background:#4a2326}
+.tf_vlakno,.tf_svl{background:#0b0d10}
+/* banka jako bankovni aplikace */
+.tf_banka .tfZust{background:linear-gradient(140deg,#17796b 0%,#0f5148 100%);padding:18px 16px 20px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.tf_banka .tfZust b{font:600 30px/1.1 var(--f);letter-spacing:-.01em}
+.tfPoh div{border-bottom-color:rgba(255,255,255,.06)!important}
+#tf .tfCas button,#tf .tfVec button{border-radius:16px;background:#2b3037}
+/* nastaveni telefonu */
+.tfSkup{background:#1a1d22;border-radius:16px;overflow:hidden;margin:0 0 6px}
+.tfSkup button{width:100%;display:flex;align-items:center;gap:10px;min-height:50px;padding:9px 14px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:#eef0f2;text-align:left;font:500 14px/1.25 var(--f)}
+.tfSkup button:last-child{border-bottom:0}.tfSkup span{flex:1}.tfSkup small{display:block;font-size:11.5px;color:#8b929b;margin-top:2px}.tfSkup b{color:#7d848d;font-size:20px;font-weight:400}
+.tfTg{flex:none;width:44px;height:26px;border-radius:13px;background:#3a3f46;position:relative;transition:background .15s}
+.tfTg::after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.tfTg.on{background:#34c06a}.tfTg.on::after{left:21px}
+.tfNast button{border-bottom-color:rgba(255,255,255,.06)}
+/* notifikace jako heads-up v Androidu */
+#tfOzn{background:rgba(28,31,36,.97)!important;border:0!important;border-radius:18px!important;box-shadow:0 8px 28px rgba(0,0,0,.45)!important;padding:10px 14px 11px 52px!important;font-family:var(--f)}
+#tfOzn::before{content:'';position:absolute;left:12px;top:11px;width:30px;height:30px;border-radius:9px;background:#2e8b57 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4C7 4 3 7.2 3 11.2c0 2.3 1.3 4.3 3.4 5.6L5.6 20l3.9-2.1c.8.2 1.6.3 2.5.3 5 0 9-3.2 9-7S17 4 12 4z' fill='%23fff'/%3E%3C/svg%3E") center/18px no-repeat}
+#tfOzn.stin::before{background-color:#1b1c20}
+#tfOzn b{color:#eef0f2!important;font-weight:600}#tfOzn span{color:#c7ccd3}
+/* mapa */
+#tf .tfMapa canvas{border-radius:16px}
+#tf .tfMapB button{border-radius:50%;background:rgba(20,23,28,.88);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+#tf .tfRez button{border-radius:18px;background:#1a1d22;border-color:transparent}#tf .tfRez button.on{background:#2f6fb0;border-color:#2f6fb0}
+#tf #tfHled{border-radius:22px;background:#1a1d22;border-color:transparent;padding:10px 16px}
+#tf .tfNavI{border-radius:16px;background:#2f6fb0}
+/* jizdni rady: cislo linky jako na oznacniku */
+#tf .ln{border-radius:3px;font-family:var(--fc);font-size:13px;letter-spacing:.02em}
+
+/* ---------- prohlizec a e-shopy (src/eshop.js) ---------- */
+.tf_obchod,.tf_shop,.tf_zbozi,.tf_hotovo{padding:0!important;background:#fff;color:#1d1d1f}
+.esUrl{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:6px;margin:0;padding:6px 10px 8px;background:#16181b;color:#e9eaec;font:500 13px/1 var(--f)}
+.esUrl::before{content:'';position:absolute;left:10px;right:10px;top:4px;bottom:6px;border-radius:18px;background:#2a2d32;z-index:-1}
+.esUrl .esZam{display:flex;padding-left:10px;color:#9aa0a8}.esUrl b{font-weight:600;color:#fff}.esUrl i{font-style:normal;color:#8d939b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.esUrl{isolation:isolate;min-height:40px}
+.esHd{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--b);color:#fff}
+.esLogo{flex:none;display:flex;align-items:center;padding:0;border:0;background:none;color:#fff}
+.esHl{flex:1;min-width:0;display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:4px;background:#fff;color:#8a8f96;font-size:12.5px}
+.esKos{position:relative;flex:none;width:36px;height:36px;border:0;background:none;color:#fff;display:flex;align-items:center;justify-content:center}
+.esKos em{position:absolute;right:0;top:1px;border:2px solid var(--b)}
+.esBan{padding:12px 14px;background:var(--b2);border-bottom:1px solid rgba(0,0,0,.06)}
+.esBan b{display:block;font:700 16px/1.2 var(--f);color:#1d1d1f}.esBan span{display:block;margin-top:2px;font-size:12px;color:#57606a}
+.esSek{padding:12px 10px 4px}
+.esSek h3{display:flex;align-items:baseline;gap:8px;margin:0 4px 10px;font:700 17px/1.2 var(--f);color:#1d1d1f}.esSek h3 small{font-size:12px;font-weight:500;color:#7b8189}
+.esMriz{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:8px}
+.esKarta{display:flex;flex-direction:column;border:1px solid #e6e6e3;border-radius:8px;padding:0 0 10px;background:#fff;overflow:hidden}
+.esKarta.brzy{opacity:.6}
+.esKl{display:block;padding:0;border:0;background:none;text-align:left;color:inherit}
+.esKl b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:8px 10px 0;min-height:2.6em;font:600 13px/1.3 var(--f);color:#1d1d1f}
+.esObr{display:block;background:#f3f3f0}.esObr .esImg{display:block;width:100%;height:auto;aspect-ratio:4/3}
+.esObr.velky{border-radius:8px;margin:0 0 12px}.esObr.mini{flex:none;width:56px;border-radius:6px}
+.esCe{margin:6px 10px 0;font:700 18px/1.1 var(--f);color:#1d1d1f;letter-spacing:-.01em}
+.esCe.velka{margin:4px 0 0;font-size:26px}.esCe small{margin-left:6px;font-size:12px;font-weight:500;color:#7b8189}
+.esSt{display:flex;flex-wrap:wrap;gap:2px 6px;margin:4px 10px 0;font-size:11.5px;line-height:1.3}
+.esDo{font-weight:600}.esDo.ok{color:#1d8a3f}.esDo.cesta{color:#1b62c4}.esDo.mas{color:#1d1d1f}.esDo.brzy{color:#8a8f96}.esDod{color:#57606a}
+.esKoup{margin:9px 10px 0;height:34px;border:0;border-radius:6px;background:var(--b,#1d1d1f);color:#fff;font:700 13.5px/1 var(--f)}
+.esKoup:active{filter:brightness(1.2)}
+.esKoup.velke{display:block;width:100%;margin:12px 0 0;height:46px;font-size:16px;border-radius:8px}
+.esKoup.sek{background:#1d1d1f}
+.esPozn{margin:8px 6px 6px;font-size:11.5px;line-height:1.4;color:#7b8189}
+.esFt{margin-top:14px;padding:14px 14px 18px;background:#f3f3f0;color:#7b8189;font-size:10.5px;line-height:1.6}.esFt b{color:#3c4148}
+.esDrob{padding:9px 14px 0;font-size:12px;color:#7b8189}.esDrob button{border:0;background:none;padding:0;color:#1b62c4;font:inherit}
+.esDet{padding:10px 14px 4px}.esDet h2{margin:0;font:700 19px/1.25 var(--f);color:#1d1d1f}
+.esDet .esSt{margin:6px 0 0;font-size:12.5px}
+.esDet h4{margin:16px 0 4px;font:700 13px/1.2 var(--f);color:#1d1d1f;text-transform:uppercase;letter-spacing:.04em}
+.esDet p{margin:0;font-size:13px;line-height:1.5;color:#3c4148}
+.esBox{display:flex;gap:10px;align-items:center;margin:12px 0 0;padding:10px 12px;border-radius:8px;background:#f1f6fd;color:#1b62c4;font-size:12px;line-height:1.4}
+.esBox span{color:#3c4148}.esBox b{display:block;color:#1d1d1f;font-size:13px}.esBox.chyba{background:#fdf1ef;color:#c8282e}
+.esPar{display:grid;grid-template-columns:auto 1fr;gap:0;margin:4px 0 0;font-size:12.5px;border-top:1px solid #ececea}
+.esPar dt,.esPar dd{margin:0;padding:7px 0;border-bottom:1px solid #ececea}.esPar dt{color:#7b8189;padding-right:14px}.esPar dd{color:#1d1d1f}
+.esStart{padding:14px 14px 18px;color:#1d1d1f}.esStart h2{margin:0 0 10px;font:700 20px/1.2 var(--f)}
+.esObl{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.esTile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:0 0 10px;border:1px solid #e6e6e3;border-radius:10px;background:#fff;color:#1d1d1f;text-align:left;overflow:hidden}
+.esTile i{display:flex;align-items:center;justify-content:center;width:100%;height:58px;margin:0 0 6px}
+.esTile b{padding:0 10px;font:700 14px/1.2 var(--f)}.esTile span{padding:0 10px;font-size:11.5px;line-height:1.3;color:#57606a}.esTile small{padding:2px 10px 0;font-size:11px;color:#1d8a3f;font-weight:600}
+.esInfo{display:flex;justify-content:space-between;align-items:center;width:100%;margin:10px 0 0;padding:11px 12px;border:1px solid #e6e6e3;border-radius:10px;background:#fafaf8;color:#1d1d1f;font:500 13px/1.2 var(--f);text-align:left}
+.esInfo span{color:#7b8189}.esInfo.odk b{color:#1b62c4}
+/* pokladna = spodni list */
+.tfSheet{position:absolute;inset:0;z-index:8;display:none}.tfSheet.on{display:block}
+.esZav{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+.esList{position:absolute;left:0;right:0;bottom:0;max-height:92%;overflow:auto;padding:8px 16px 16px;border-radius:20px 20px 0 0;background:#fff;color:#1d1d1f;animation:esUp .2s ease-out}
+@keyframes esUp{from{transform:translateY(40px);opacity:.4}}
+.esUch{display:block;width:38px;height:4px;margin:0 auto 10px;border-radius:2px;background:#d4d5d2}
+.esList h3{margin:0 0 10px;font:700 17px/1.2 var(--f)}
+@media (max-height:430px){.esList{padding:6px 14px 16px}.esList h3{margin-bottom:6px;font-size:15px}.esRad{padding:6px 0}.esPol{padding-bottom:6px}.esObr.mini{width:44px}.esCelk{padding-top:6px}.esCelk b{font-size:19px}.esPlat{padding-bottom:6px}.esPlat .esKoup.velke{height:42px}.esZrus{height:32px}}
+.esPol{display:flex;align-items:center;gap:10px;padding:0 0 10px;border-bottom:1px solid #ececea}.esPol b{flex:1;font:600 13.5px/1.3 var(--f)}.esPol>i{font-style:normal;font-weight:700;font-size:14px}
+.esRad{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #ececea;font-size:12.5px}
+.esRad small{flex:0 0 64px;color:#7b8189;padding-top:1px}.esRad div{flex:1}.esRad b{display:block;font-weight:600;color:#1d1d1f}.esRad span{color:#57606a}.esRad>i{font-style:normal;color:#1d8a3f;font-weight:600}
+.esCelk{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0 2px}.esCelk span{font-size:13px;color:#57606a}.esCelk b{font:700 22px/1 var(--f)}
+.esChyba{margin:6px 0 0;padding:8px 10px;border-radius:6px;background:#fdf1ef;color:#b3261e;font-size:12.5px;line-height:1.35}
+.esPlat{position:sticky;bottom:-16px;margin:8px -16px -16px;padding:2px 16px 10px;background:#fff;box-shadow:0 -8px 12px -8px rgba(0,0,0,.12)}
+.esPlat .esKoup.velke{margin-top:8px}
+.esZrus{display:block;width:100%;height:40px;margin:2px 0 0;border:0;background:none;color:#57606a;font:600 14px/1 var(--f)}
+.esHot{padding:20px 16px 6px;text-align:center;color:#1d1d1f}
+.esHot>i{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;margin:0 0 10px}
+.esHot h2{margin:0;font:700 20px/1.2 var(--f)}.esHot small{display:block;margin:4px 0 12px;color:#7b8189;font-size:12px;font-family:ui-monospace,monospace}
+.esHot .esPol{text-align:left;border-top:1px solid #ececea;padding-top:10px}.esHot .esPol>i{font-size:12px}
+.esHot p{margin:10px 0 0;font-size:13px;line-height:1.45;color:#3c4148}
+/* aplikace Jizdenky */
+.tf_jizdenky{padding:0 12px 12px!important;background:#f2f1ee;color:#1d1d1f}
+.jzHd{margin:0 -12px 12px;padding:14px 16px 16px;background:#c4262e;color:#fff}.jzHd b{display:block;font:700 22px/1.1 var(--f)}.jzHd span{font-size:12px;opacity:.85}
+.jzAkt{position:relative;overflow:hidden;margin:0 0 6px;padding:14px 14px 12px;border-radius:14px;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.12);text-align:center}
+.jzAkt small{display:block;font-size:11px;font-weight:600;color:#1d8a3f;letter-spacing:.06em;text-transform:uppercase}
+.jzAkt b{display:block;margin:2px 0 2px;font:700 20px/1.2 var(--f)}.jzZb{display:block;font-size:14px;font-weight:600;color:#c4262e}
+.jzQr{display:block;width:118px;height:118px;margin:10px auto 6px;padding:6px;background:#fff;border:1px solid #ececea}
+.jzAkt p{margin:0;font-size:11.5px;color:#7b8189}
+.jzPas{height:8px;margin:-14px -14px 10px;background:#f6c51b;overflow:hidden}.jzPas i{display:block;width:40%;height:100%;background:#c4262e;animation:jzP 2.4s linear infinite}
+@keyframes jzP{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+.jzNic{margin:0 0 6px;padding:14px;border-radius:14px;background:#fff;border:1px dashed #c9c9c4}.jzNic b{display:block;font-size:15px}.jzNic span{font-size:12px;color:#7b8189}
+.tf_jizdenky .tfSub{color:#7b8189!important}
+.jzRad{display:flex;align-items:center;gap:10px;margin:0 0 6px;padding:10px 12px;border-radius:12px;background:#fff}
+.jzRad span{flex:1;min-width:0}.jzRad b{display:block;font-size:14px}.jzRad small{display:block;font-size:11.5px;line-height:1.3;color:#7b8189}
+.jzRad>i{font-style:normal;font-weight:700;font-size:15px;white-space:nowrap}
+.jzRad button{height:34px;padding:0 14px;border:0;border-radius:17px;background:#c4262e;color:#fff;font:600 13px/1 var(--f)}
+#tf .jzRad em{font-style:normal;font-size:12px;font-weight:600;color:#1d8a3f;background:none;padding:0;min-width:0;height:auto;line-height:1.2}
+.tf_jizdenky .tfPozn{color:#7b8189!important}
+/* Ž5: obleceni (aplikace Obleceni v telefonu) */
+#tf .tfVec small.tfKr{color:#ff8a80}
+#tf .tfObPr{color:#ffd27a;font-weight:600}
+#tf .tfVec button.s{background:transparent;border:1px solid #3a4048}
+#tf .tfZust.tfObPop b{font-size:15px;line-height:1.35;font-weight:600;letter-spacing:0}
+</style>
+</head>
+<body>
+<div id="loading">Načítám…</div>
+<div id="app"></div>
+<div id="hud" class="free">
+  <div id="tl" class="pan">
+    <div class="row"><span id="oko" class="o0"><svg viewBox="0 0 24 14" width="30" height="18"><path class="ok1" d="M1 7C4.5 2 8 0.8 12 0.8S19.5 2 23 7C19.5 12 16 13.2 12 13.2S4.5 12 1 7Z"/><circle class="ok2" cx="12" cy="7" r="3.6"/><circle class="ok3" cx="12" cy="7" r="1.5"/></svg><span id="okoT">Nevnímá tě</span><span id="kry" title="Krytí"></span></span></div>
+    <div id="duv"></div>
+    <div class="lad row"><span>Podezření</span><span id="sust">0 %</span></div>
+    <div id="sus" class="lad"><div id="susbar"></div></div>
+    <div class="row"><span id="cont" class="ok">Kontakt</span></div>
+    <div class="row"><span id="dist">Odstup – m</span><span id="time">0:00</span></div>
+  </div>
+  <canvas id="mini"></canvas>
+  <div id="hod" class="pan"></div>
+  <button id="hlas" class="pan">Hlásit místo</button>
+  <div id="msg"></div>
+  <div id="napo"></div>
+  <div id="roz"><b id="rozK"></b><p id="rozT"></p><button id="rozD">Dál</button></div>
+  <button id="nova">Na webu je nová verze hry · obnovit</button>
+  <div id="mark"><div></div></div>
+  <div id="mise"><button id="mmisto">Jsem na místě</button><button id="mzde">Objekt je zde</button><button id="mkon">Ukončit</button></div>
+  <button id="mpr">Případy</button>
+  <button id="kcB"></button>
+  <button id="pov">3. osoba</button>
+  <button id="menuB" aria-label="Menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div id="foto"><div class="ram"><i></i></div><div id="fotoB"><button id="fSnap">Vyfotit</button><button id="fZoom">1×</button><button id="fAlb">Album 0</button><button id="fX">Zavřít</button></div></div>
+  <div id="kriz"></div><div id="phl"><i></i></div>
+  <div id="joy"><div id="knob"></div></div>
+  <div id="btns">
+    <button id="car"></button>
+    <button id="mhd"></button>
+    <button id="sed"></button>
+    <button id="zast"></button>
+    <button id="obchod"></button>
+    <button id="dum"></button>
+    <div class="r2 rz"><button id="mir" style="display:none">Mířit</button><button id="zbrB" style="display:none">Zbraň</button><button id="kryt" aria-label="Kryt" style="display:none">Kryt</button><button id="utok" aria-label="Útok" style="display:none">Útok</button></div>
+    <div class="r2 rb"><button id="fotB" aria-label="Fotoaparát" style="display:none"><svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3.5 8h3.8l1.8-2.5h5.8L16.7 8h3.8v11h-17z"/><circle cx="12" cy="13.3" r="3.6"/><path d="M18 10.3h.01"/></svg></button><button id="tel" aria-label="Telefon"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/><path d="M10.5 18.5h3"/></svg></button><button id="run">Běh</button></div>
+    <div id="pedals"><button id="brk">Brzda</button><button id="gas">Plyn</button></div>
+  </div>
+  <div id="spd" class="pan">0 km/h</div>
+  <div id="attr">Mapa © přispěvatelé OpenStreetMap (ODbL) · data base © IPR Praha · jízdní řády ROPID/PID (CC BY 4.0) · Weather data by Open-Meteo.com (CC BY 4.0)</div>
+  <div id="fps"></div>
+</div>
+<div id="tf"></div>
+<div id="tfOzn"></div>
+<div id="intro" class="ov on v"><div class="mm"><!-- UI2 (patch154): uvodni obrazovka a hlavni menu (src/ui.css .mm, main.js blok UI2) -->
+  <header class="mmLogo"><div class="mmK"><i></i><span id="mmCas">Praha</span></div><h1><b>Stín</b><span>nad Starým Městem</span></h1></header>
+  <nav class="mmNav">
+    <button id="mmPokr" class="mmI" style="display:none">Pokračovat<small id="mmPokrT"></small></button>
+    <button id="rzK" class="mmI">Kariéra<small>od nuly, za koruny</small></button>
+    <button id="rzV" class="mmI on">Výcvik<small>případy a spisy</small></button>
+    <button id="mmNast" class="mmI mmSep">Nastavení</button>
+    <button id="mmProf" class="mmI">Profil a záloha</button>
+    <button id="mmOhre" class="mmI">Ovládání a o hře</button>
+  </nav>
+  <section class="mmDet">
+  <div id="uvK" class="mmP">
+  <div class="mmH">Kariéra<small id="mmKs"></small></div>
+  <p>Začínáš na Hlavním nádraží s batohem, telefonem a 800 Kč. Zakázky, peníze, zprávy, mapa a obchody máš v telefonu. Hra běží dál, i když se díváš do telefonu.</p>
+  <dl class="mmSt" id="mmKst"></dl>
+  <div class="b"><button id="karGo">Hrát kariéru</button><button id="karProf" class="s">Profil a postup</button></div>
+  </div>
+  <div id="uvV" class="mmP">
+  <div class="mmH">Výcvik<small id="mmVs"></small></div>
+  <p>Vyber si případ. Objekt vyjde z domu a ty ho sleduješ tak, aby si tě nevšiml. Čas ve hře je skutečný pražský čas.</p>
+  <dl class="mmSt" id="mmVst"></dl>
+  <div class="b"><button id="pokr" style="display:none"></button><button id="go">Případy</button><button id="walk" class="s">Jen se projít</button><button id="demo" class="s">Ukázka: Karlův most</button><button id="prof0" class="s">Profil a postup</button></div>
+  </div>
+  <div id="uvO" class="mmP">
+  <div class="mmH">Ovládání</div>
+  <ul class="mmTip">
+    <li>Joystick vlevo = chůze, tažení prstem = rozhlížení. Telefon (vpravo dole) je rozcestník: zakázky, mapa, jízdní řády, obchody, nastavení.</li>
+    <li>Drž odstup a nechoď objektu do zorného pole, hlavně když se ohlíží. Dav tě kryje, běh je nápadný.</li>
+    <li>U domu si vyber stanoviště a stiskni „Jsem na místě“. Objekt poznáš jen podle oblečení z popisu; vyfoť ho a hra jen potvrdí, že je to on.</li>
+    <li>Když objekt 30 s nevidíš, utekl ti a přijde lokalizace telefonu (kruh na mapě), pak každé 2 minuty další. U cíle stiskni „Objekt je zde“.</li>
+    <li>Ukrást jde zaparkované auto, auto stojící na semaforu, kolo nebo koloběžku (tlačítko u vozidla). Telefon v ruce = slabé krytí, běžet s ním nejde.</li>
+  </ul>
+  <div class="mmKl"><kbd>W A S D</kbd><span>chůze, jízda</span><kbd>Shift</kbd><span>běh</span><kbd>T</kbd><span>telefon</span><kbd>F</kbd><span>fotoaparát</span><kbd>E</kbd><span>vozidlo</span><kbd>C</kbd><span>1. / 3. osoba</span><kbd>Q X Z R</kbd><span>zbraň, útok, mířit, přebít</span><kbd>Esc</kbd><span>menu ve hře</span></div>
+  </div>
+  </section>
+  <footer class="mmF"><span>Mapa © přispěvatelé OpenStreetMap (ODbL) · data © IPR Praha · jízdní řády ROPID/PID (CC BY 4.0) · počasí Open-Meteo.com (CC BY 4.0) · písmo Barlow (SIL OFL)</span><b id="mmVer"></b></footer>
+</div></div>
+<div id="nastO" class="ov"><div class="sx"><!-- UI2: nastaveni hry (main.js nastOtevri) -->
+  <header class="sxH"><b>Nastavení</b><button id="nastX">Zpět</button></header>
+  <nav class="sxT" id="nastT"></nav>
+  <div class="sxL" id="nastL"></div>
+</div></div>
+<div id="pauza" class="ov"><div class="mm"><!-- UI2: menu ve hre (≡, Esc); hra bezi dal ve skutecnem case -->
+  <header class="mmLogo"><div class="mmK"><i></i><span>Hra běží dál</span></div><h1><b>Menu</b><span id="pzCas"></span></h1></header>
+  <nav class="mmNav">
+    <button id="pzDal" class="mmI on">Zpět do hry</button>
+    <button id="pzNast" class="mmI">Nastavení</button>
+    <button id="pzProf" class="mmI">Profil a postup</button>
+    <button id="pzHl" class="mmI mmSep">Hlavní nabídka</button>
+  </nav>
+</div></div>
+<div id="nab" class="ov"><div class="card dlouha">
+  <h1>Případy</h1>
+  <div class="sub" id="nabS">Rychlé akce a zakázky z dat se mění každých 10 minut; spisy mají své časové okno.</div>
+  <div class="nova" id="nabN"></div>
+  <div id="nabL"></div>
+  <div class="b"><button id="nabPop" class="s"></button><button id="nabX" class="s">Zpět</button></div>
+</div></div>
+<div id="brif" class="ov"><div class="card dlouha spis">
+  <span class="raz">TAJNÉ</span>
+  <div class="spisO" id="brOp"></div>
+  <h1 id="brT"></h1>
+  <div class="sub" id="brS"></div>
+  <div class="spisH"><div id="brSil"></div><div>
+  <div class="pole"><i>Objekt</i><span id="brO"></span></div>
+  <div class="pole"><i>Kdo to je</i><span id="brP"></span></div>
+  <div class="pole"><i>Zdroj</i><span id="brZ"></span></div>
+  </div></div>
+  <div class="pole"><i>Známé zvyky</i><span id="brZv"></span></div>
+  <div class="pole varov" id="brV"></div>
+  <div class="pole"><i>Adresa domu</i><span id="brA"></span></div>
+  <div class="pole"><i>Úkol</i><span id="brU"></span></div>
+  <div class="pole"><i>Postup</i><span id="brK"></span></div>
+  <div class="b"><button id="brGo">Vyrazit</button><button id="brX" class="s">Zpět</button></div>
+</div></div>
+<div id="vyh" class="ov"><div class="card dlouha">
+  <div id="vyhC"></div>
+  <div class="b"><button id="vyhAgain">Znovu</button><button id="vyhPod" class="s" style="display:none">Podobná</button><button id="vyhNab" class="s">Případy</button><button id="vyhFree" class="s">Volná procházka</button></div>
+</div></div>
+<div id="potv" class="ov"><div class="card">
+  <h1>Objekt je zde?</h1>
+  <p id="potvT"></p>
+  <div class="b"><button id="potvA">Ano, objekt je zde</button><button id="potvN" class="s">Zpět do mise</button></div>
+</div></div>
+<div id="alb" class="ov"><div class="card dlouha">
+  <h1 id="albT">Album případu</h1>
+  <div id="albC"></div>
+  <div class="b"><button id="albX">Zpět do mise</button></div>
+</div></div>
+<div id="prof" class="ov"><div class="card dlouha">
+  <h1>Profil a postup</h1>
+  <div class="sub">Uloženo jen v tomto prohlížeči. Smazání dat prohlížeče profil smaže: zálohuj kódem.</div>
+  <div class="pole"><i>Přezdívka</i></div><input id="pfN" maxlength="24" placeholder="přezdívka">
+  <div class="pole"><i>Stupeň hráče</i></div><div id="pfPost"></div>
+  <div class="pole"><i>Vybavení</i></div><div id="pfVyb"></div>
+  <div class="pole"><i>Odznaky</i></div><div id="pfOdz" class="odzL"></div>
+  <div class="pole"><i>Případy</i></div><div class="pole" id="pfB"></div>
+  <div class="pole"><i>Nastavení</i></div><div class="b"><button id="pfNast" class="s">Grafika, zvuk a hra</button></div><div class="b" style="display:none"><button id="pfUspor" class="s"></button><button id="pfPop" class="s"></button><button id="pfZp" class="s"></button><button id="pfZvuk" class="s"></button><button id="pfKrev" class="s"></button></div>
+  <div class="pole"><i>Záloha (export)</i></div><textarea id="pfE" readonly></textarea>
+  <div class="pole"><i>Obnovit ze zálohy (import)</i></div><textarea id="pfI" placeholder="PRAHA1-…"></textarea>
+  <div class="pole" id="pfM"></div>
+  <div class="b"><button id="pfEx">Vytvořit kód</button><button id="pfIm" class="s">Načíst kód</button><button id="pfX" class="s">Zpět</button></div>
+</div></div>
+<div id="nac" class="ov"><div class="card"><p>Stavím okolí domu…</p></div></div>
+<div id="odj" class="ov"><div class="card">
+  <h1 id="odjT"></h1>
+  <div class="sub" id="odjS"></div>
+  <div id="odjP"></div>
+  <div class="sub">Nejbližší odjezdy</div>
+  <div id="odjD"></div>
+  <div class="sub" style="margin-top:12px">Linky a směry</div>
+  <div id="odjL"></div>
+  <div class="b"><button id="odjX">Zavřít</button></div>
+</div></div>
+<div id="end" class="ov"><div class="card">
+  <h1 id="endT"></h1>
+  <p id="endP"></p>
+  <div class="b"><button id="again">Znovu</button><button id="free2" class="s">Volná procházka</button></div>
+</div></div>
+<div id="zad" class="ov"><div class="card dlouha"><!-- NV2: zadrzen policii (src/policie.js, main.js zadrzenEl) -->
+  <div id="zadC"></div>
+  <div class="b"><button id="zadOk">Pokračovat</button></div>
+</div></div>
+<div id="hbZ"></div>
+<div id="hl" class="ov"><div class="card">
+  <h1>Nahlásit místo</h1>
+  <div class="sub" id="hlPoz"></div>
+  <div class="hlr"><select id="hlDruh"><option value="skok">Schod nebo skok v zemi</option><option value="nerovnost">Nerovnost, šikmá plocha</option><option value="propad">Propad, díra, prázdno</option><option value="pruchod">Průchod nejde projít</option><option value="budova">Budova chybí, navíc nebo špatně</option><option value="jine">Jiné</option></select></div>
+  <div class="hlr"><input id="hlPozn" maxlength="200" placeholder="Poznámka (nepovinné)"></div>
+  <div class="b"><button id="hlUloz">Uložit hlášení</button><button id="hlZav" class="s">Zavřít</button></div>
+  <div class="b hl2"><button id="hlKop" class="s">Zkopírovat hlášení (0)</button><button id="hlSmaz" class="s">Smazat odeslaná</button></div>
+  <div class="sub hb1"><b>Zapisovač hrbolů</b> · <span id="hbInfo"></span></div>
+  <div class="b hl2"><button id="hbZap" class="s">Zapisovač: vypnutý</button><button id="hbKop" class="s">Zkopírovat záznam (0)</button><button id="hbSmaz" class="s">Smazat záznam</button></div>
+  <textarea id="hlTxt" readonly></textarea>
+</div></div>
+<script>window.__V="2557a6a809"</script><script type="module" src="app.js?v=2557a6a809"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+{
+  "v": 1,
+  "pozn": "NV4: modely zbrani v ruce hrace (src/zbrane_modely.js). Klic = id zbrane (boxer, obusek, nuz, pistole, puska); bez zaznamu se kresli zakladni model kodem (nuz a pistole upecene v tele postavy). glb = soubor v data/zbrane/, meritko, posun [m] a rot [stupne X, Y, Z] do ramce zbrane, usti [x, y, z] v ramci (jen strelne). Ramec a postup pro Meshy: claude/mesto/zbrane.md.",
+  "m": {}
+}
